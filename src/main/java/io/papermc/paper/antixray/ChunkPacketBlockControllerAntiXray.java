@@ -186,15 +186,23 @@ public final class ChunkPacketBlockControllerAntiXray extends ChunkPacketBlockCo
             return;
         }
 
-        if (!Bukkit.isPrimaryThread()) {
-            // Plugins?
-            MinecraftServer.getServer().scheduleOnMain(() -> modifyBlocks(chunkPacket, chunkPacketInfo));
-            return;
-        }
-
+        // Canvas start - region threading
+        // from bellow
         LevelChunk chunk = chunkPacketInfo.getChunk();
         int x = chunk.getPos().x;
         int z = chunk.getPos().z;
+        if (!Bukkit.isPrimaryThread()) {
+            // Plugins?
+            io.papermc.paper.threadedregions.RegionizedServer.getInstance().taskQueue.queueChunkTask(
+                chunk.level, x, z, () -> {
+                    modifyBlocks(chunkPacket, chunkPacketInfo);
+                }
+            );
+        // Canvas end - region threading
+            return;
+        }
+
+        // Canvas - region threading - move up
         Level level = chunk.getLevel();
         ((ChunkPacketInfoAntiXray) chunkPacketInfo).setNearbyChunks(level.getChunkIfLoaded(x - 1, z), level.getChunkIfLoaded(x + 1, z), level.getChunkIfLoaded(x, z - 1), level.getChunkIfLoaded(x, z + 1));
         executor.execute((Runnable) chunkPacketInfo);

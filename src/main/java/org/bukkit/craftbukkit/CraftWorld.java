@@ -230,7 +230,7 @@ public class CraftWorld extends CraftRegionAccessor implements World {
             if (chunk == null) {
                 continue;
             }
-            size += chunk.blockEntities.size();
+            size += chunk.canvas$getAllBlockEntities().length; // Canvas - optimize block entity fetching
         }
         return size;
     }
@@ -1147,12 +1147,13 @@ public class CraftWorld extends CraftRegionAccessor implements World {
     public void save(boolean flush) {
         org.spigotmc.AsyncCatcher.catchOp("world save"); // Spigot
         this.server.checkSaveState();
-        boolean oldSave = this.world.noSave;
-
-        this.world.noSave = false;
-        this.world.save(null, flush, false);
-
-        this.world.noSave = oldSave;
+        // Canvas start - region threading
+        this.world.regioniser.computeForAllRegionsUnsynchronised((region) -> {
+            region.getData().canvas$saveAllTicket.propagate(
+                new io.canvasmc.canvas.util.ticket.SaveAllTicket(() -> {}, (thrown) -> net.minecraft.server.MinecraftServer.LOGGER.error("Failed to save region", thrown), flush)
+            );
+        });
+        // Canvas end - region threading
     }
 
     @Override
@@ -2071,4 +2072,11 @@ public class CraftWorld extends CraftRegionAccessor implements World {
         return POINTERS_SUPPLIER.view(this);
     }
     // Paper end
+    // Canvas start - region threading
+
+    @Override
+    public io.canvasmc.canvas.region.@org.jspecify.annotations.NonNull WorldRegionizer getRegionizer() {
+        return this.world.regioniser;
+    }
+    // Canvas end - region threading
 }

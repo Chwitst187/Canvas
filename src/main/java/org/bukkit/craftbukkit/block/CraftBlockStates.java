@@ -186,7 +186,7 @@ public final class CraftBlockStates {
     }
 
     public static BlockState getBlockState(Block block) {
-        return CraftBlockStates.getBlockState(block, true);
+        return CraftBlockStates.getBlockState(block, io.canvasmc.canvas.Config.INSTANCE.tileEntitySnapshotCreation); // Canvas - don't use snapshots for acquiring blockstate
     }
 
     public static BlockState getBlockState(Block block, boolean useSnapshot) {

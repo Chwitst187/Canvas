@@ -347,7 +347,7 @@ public class CraftBlock implements Block {
 
     @Override
     public BlockState getState() {
-        return CraftBlockStates.getBlockState(this);
+        return CraftBlockStates.getBlockState(this, io.canvasmc.canvas.Config.INSTANCE.tileEntitySnapshotCreation); // Canvas - don't use snapshots for acquiring blockstate
     }
 
     // Paper start

@@ -86,6 +86,7 @@ public abstract class SingleUserAreaMap<T> {
         if (fromX == NOT_SET) {
             return false;
         }
+        if (fromX == toX && fromZ == toZ && oldViewDistance == newViewDistance) return true; // Leaf - optimize player movement
 
         this.lastChunkX = toX;
         this.lastChunkZ = toZ;

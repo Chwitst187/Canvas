@@ -36,14 +36,17 @@ class PaperEventManager {
 
     // SimplePluginManager
     public void callEvent(@NotNull Event event) {
+        // Canvas start - skip event if no listeners
+        HandlerList handlers = event.getHandlers();
+        RegisteredListener[] listeners = handlers.getRegisteredListeners();
+        if (listeners.length == 0) return;
+        // Canvas end - skip event if no listeners
         if (event.isAsynchronous() && this.server.isPrimaryThread()) {
             throw new IllegalStateException(event.getEventName() + " may only be triggered asynchronously.");
         } else if (!event.isAsynchronous() && !this.server.isPrimaryThread() && !this.server.isStopping()) {
             throw new IllegalStateException(event.getEventName() + " may only be triggered synchronously.");
         }
-
-        HandlerList handlers = event.getHandlers();
-        RegisteredListener[] listeners = handlers.getRegisteredListeners();
+        // Canvas - skip event if no listeners
 
         for (RegisteredListener registration : listeners) {
             if (!registration.getPlugin().isEnabled()) {
