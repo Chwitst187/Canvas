@@ -514,6 +514,7 @@ public class CraftScheduler implements BukkitScheduler {
     }
 
     protected CraftTask handle(final CraftTask task, final long delay) { // Paper
+        if (true) throw new UnsupportedOperationException(); // Folia - region threading
         // Paper start
         if (!this.isAsyncScheduler && !task.isSync()) {
             this.asyncScheduler.handle(task, delay);

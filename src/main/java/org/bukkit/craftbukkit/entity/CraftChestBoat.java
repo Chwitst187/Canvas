@@ -15,6 +15,7 @@ public abstract class CraftChestBoat extends CraftBoat implements org.bukkit.ent
 
     @Override
     public AbstractChestBoat getHandle() {
+        ca.spottedleaf.moonrise.common.util.TickThread.ensureTickThread(this.entity, "Accessing entity state off owning region's thread"); // Folia - region threading
         return (AbstractChestBoat) this.entity;
     }
 

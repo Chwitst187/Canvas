@@ -12,6 +12,7 @@ public class CraftIllager extends CraftRaider implements Illager {
 
     @Override
     public AbstractIllager getHandle() {
+        ca.spottedleaf.moonrise.common.util.TickThread.ensureTickThread(this.entity, "Accessing entity state off owning region's thread"); // Folia - region threading
         return (AbstractIllager) this.entity;
     }
 }

@@ -11,6 +11,7 @@ public class CraftAgeable extends CraftCreature implements Ageable {
 
     @Override
     public AgeableMob getHandle() {
+        ca.spottedleaf.moonrise.common.util.TickThread.ensureTickThread(this.entity, "Accessing entity state off owning region's thread"); // Folia - region threading
         return (AgeableMob) this.entity;
     }
 

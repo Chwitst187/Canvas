@@ -19,6 +19,7 @@ public class CraftCow extends CraftAbstractCow implements Cow {
 
     @Override
     public net.minecraft.world.entity.animal.cow.Cow getHandle() {
+        ca.spottedleaf.moonrise.common.util.TickThread.ensureTickThread(this.entity, "Accessing entity state off owning region's thread"); // Folia - region threading
         return (net.minecraft.world.entity.animal.cow.Cow) this.entity;
     }
 

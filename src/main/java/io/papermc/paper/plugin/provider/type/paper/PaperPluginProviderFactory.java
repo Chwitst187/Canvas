@@ -24,6 +24,11 @@ class PaperPluginProviderFactory implements PluginTypeFactory<PaperPluginParent,
 
     @Override
     public PaperPluginParent build(JarFile file, PaperPluginMeta configuration, Path source) {
+        // Folia start - block plugins not marked as supported
+        if (!configuration.isFoliaSupported()) {
+            throw new RuntimeException("Could not load plugin '" + configuration.getDisplayName() + "' as it is not marked as supporting Folia!");
+        }
+        // Folia end - block plugins not marked as supported
         Logger jul = PaperPluginLogger.getLogger(configuration);
         ComponentLogger logger = ComponentLogger.logger(jul.getName());
         PluginProviderContext context = PluginProviderContextImpl.create(configuration, logger, source);

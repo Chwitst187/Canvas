@@ -11,6 +11,7 @@ public class CraftWitherSkull extends CraftFireball implements WitherSkull {
 
     @Override
     public net.minecraft.world.entity.projectile.hurtingprojectile.WitherSkull getHandle() {
+        ca.spottedleaf.moonrise.common.util.TickThread.ensureTickThread(this.entity, "Accessing entity state off owning region's thread"); // Folia - region threading
         return (net.minecraft.world.entity.projectile.hurtingprojectile.WitherSkull) this.entity;
     }
 

@@ -17,6 +17,7 @@ public abstract class CraftAbstractVillager extends CraftAgeable implements Craf
 
     @Override
     public net.minecraft.world.entity.npc.villager.AbstractVillager getHandle() {
+        ca.spottedleaf.moonrise.common.util.TickThread.ensureTickThread(this.entity, "Accessing entity state off owning region's thread"); // Folia - region threading
         return (Villager) this.entity;
     }
 

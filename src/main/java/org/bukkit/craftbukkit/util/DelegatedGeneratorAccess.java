@@ -67,6 +67,13 @@ public abstract class DelegatedGeneratorAccess implements WorldGenLevel {
         this.delegate = delegate;
     }
 
+    // Folia start - region threading
+    @Override
+    public net.minecraft.world.level.StructureManager structureManager() {
+        return this.delegate.structureManager();
+    }
+    // Folia end - region threading
+
     public WorldGenLevel getDelegate() {
         return this.delegate;
     }
@@ -779,4 +786,3 @@ public abstract class DelegatedGeneratorAccess implements WorldGenLevel {
         return this.delegate.getChunkIfLoadedImmediately(x, z);
     }
 }
-

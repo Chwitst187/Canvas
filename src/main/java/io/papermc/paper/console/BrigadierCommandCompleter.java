@@ -46,7 +46,7 @@ public final class BrigadierCommandCompleter {
         final ParseResults<CommandSourceStack> results = dispatcher.parse(new StringReader(line.line()), this.commandSourceStack.get());
         this.addCandidates(
             candidates,
-            CompletableFuture.supplyAsync(() -> dispatcher.getCompletionSuggestions(results, line.cursor()), this.server::scheduleOnMain)
+            CompletableFuture.supplyAsync(() -> dispatcher.getCompletionSuggestions(results, line.cursor()), io.papermc.paper.threadedregions.RegionizedServer.getInstance()::addTask) // Folia - region threading
                 .thenCompose(Function.identity())
                 .join()
                 .getList(),

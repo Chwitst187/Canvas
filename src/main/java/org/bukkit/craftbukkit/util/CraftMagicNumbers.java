@@ -372,6 +372,12 @@ public final class CraftMagicNumbers implements UnsafeValues {
             throw new InvalidPluginException("Unsupported API version " + descriptionFile.getAPIVersion());
         }
 
+        // Folia start - block plugins not marked as supported
+        if (!descriptionFile.isFoliaSupported()) {
+            throw new InvalidPluginException("Plugin " + descriptionFile.getFullName() + " is not marked as supporting regionised multithreading");
+        }
+        // Folia end - block plugins not marked as supported
+
         if (toCheck.isOlderThan(minimumVersion)) {
             // Older than supported
             throw new InvalidPluginException("Plugin API version " + descriptionFile.getAPIVersion() + " is lower than the minimum allowed version. Please update or replace it.");

@@ -27,6 +27,7 @@ public class CraftMinecartMobSpawner extends CraftMinecart implements SpawnerMin
 
     @Override
     public MinecartSpawner getHandle() {
+        ca.spottedleaf.moonrise.common.util.TickThread.ensureTickThread(this.entity, "Accessing entity state off owning region's thread"); // Folia - region threading
         return (MinecartSpawner) this.entity;
     }
 

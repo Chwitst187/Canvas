@@ -11,6 +11,7 @@ public abstract class CraftProjectile extends AbstractProjectile implements Proj
 
     @Override
     public net.minecraft.world.entity.projectile.Projectile getHandle() {
+        ca.spottedleaf.moonrise.common.util.TickThread.ensureTickThread(this.entity, "Accessing entity state off owning region's thread"); // Folia - region threading
         return (net.minecraft.world.entity.projectile.Projectile) this.entity;
     }
 }

@@ -13,6 +13,7 @@ public class CraftPillager extends CraftIllager implements Pillager, com.destroy
 
     @Override
     public net.minecraft.world.entity.monster.illager.Pillager getHandle() {
+        ca.spottedleaf.moonrise.common.util.TickThread.ensureTickThread(this.entity, "Accessing entity state off owning region's thread"); // Folia - region threading
         return (net.minecraft.world.entity.monster.illager.Pillager) this.entity;
     }
 

@@ -12,6 +12,7 @@ public class CraftGolem extends CraftCreature implements Golem {
 
     @Override
     public AbstractGolem getHandle() {
+        ca.spottedleaf.moonrise.common.util.TickThread.ensureTickThread(this.entity, "Accessing entity state off owning region's thread"); // Folia - region threading
         return (AbstractGolem) this.entity;
     }
 }

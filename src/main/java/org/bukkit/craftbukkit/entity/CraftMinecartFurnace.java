@@ -13,6 +13,7 @@ public class CraftMinecartFurnace extends CraftMinecart implements PoweredMineca
 
     @Override
     public MinecartFurnace getHandle() {
+        ca.spottedleaf.moonrise.common.util.TickThread.ensureTickThread(this.entity, "Accessing entity state off owning region's thread"); // Folia - region threading
         return (MinecartFurnace) this.entity;
     }
 

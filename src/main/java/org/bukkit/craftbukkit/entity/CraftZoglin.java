@@ -11,6 +11,7 @@ public class CraftZoglin extends CraftMonster implements Zoglin {
 
     @Override
     public net.minecraft.world.entity.monster.Zoglin getHandle() {
+        ca.spottedleaf.moonrise.common.util.TickThread.ensureTickThread(this.entity, "Accessing entity state off owning region's thread"); // Folia - region threading
         return (net.minecraft.world.entity.monster.Zoglin) this.entity;
     }
 

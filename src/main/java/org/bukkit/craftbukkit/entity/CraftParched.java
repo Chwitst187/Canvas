@@ -11,6 +11,7 @@ public class CraftParched extends CraftAbstractSkeleton implements org.bukkit.en
 
     @Override
     public Parched getHandle() {
+        ca.spottedleaf.moonrise.common.util.TickThread.ensureTickThread(this.entity, "Accessing entity state off owning region's thread"); // Folia - region threading
         return (Parched) this.entity;
     }
 

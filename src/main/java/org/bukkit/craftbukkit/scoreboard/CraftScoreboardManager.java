@@ -38,6 +38,7 @@ public final class CraftScoreboardManager implements ScoreboardManager {
 
     @Override
     public CraftScoreboard getNewScoreboard() {
+        if (true) throw new UnsupportedOperationException(); // Folia - not supported yet
         org.spigotmc.AsyncCatcher.catchOp("scoreboard creation"); // Spigot
         CraftScoreboard scoreboard = new CraftScoreboard(new ServerScoreboard(this.server));
         if (io.papermc.paper.configuration.GlobalConfiguration.get().scoreboards.trackPluginScoreboards) {
@@ -58,6 +59,7 @@ public final class CraftScoreboardManager implements ScoreboardManager {
     }
 
     public void setPlayerBoard(CraftPlayer player, CraftScoreboard scoreboard) {
+        if (true) throw new UnsupportedOperationException(); // Folia - not supported yet
         net.minecraft.world.scores.Scoreboard oldBoard = this.getPlayerBoard(player).getHandle();
         net.minecraft.world.scores.Scoreboard newBoard = scoreboard.getHandle();
         if (oldBoard == newBoard) {

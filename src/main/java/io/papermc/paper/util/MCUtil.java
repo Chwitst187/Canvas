@@ -111,6 +111,7 @@ public final class MCUtil {
      */
     public static void ensureMain(String reason, Runnable run) {
         if (!isMainThread()) {
+            if (true) throw new UnsupportedOperationException(); // Folia - region threading
             if (reason != null) {
                 MinecraftServer.LOGGER.warn("Asynchronous " + reason + "!", new IllegalStateException());
             }

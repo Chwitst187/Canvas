@@ -64,6 +64,7 @@ public class PaperPluginMeta implements PluginMeta {
     private PermissionConfiguration permissionConfiguration = new PermissionConfiguration(PermissionDefault.OP, List.of());
     @Required
     private ApiVersion apiVersion;
+    private boolean foliaSupported = false; // Folia
 
     private Map<PluginDependencyLifeCycle, Map<String, DependencyConfiguration>> dependencies = new EnumMap<>(PluginDependencyLifeCycle.class);
 
@@ -250,6 +251,13 @@ public class PaperPluginMeta implements PluginMeta {
     public @NotNull String getAPIVersion() {
         return this.apiVersion.getVersionString();
     }
+
+    // Folia start
+    @Override
+    public boolean isFoliaSupported() {
+        return this.foliaSupported;
+    }
+    // Folia end
 
     @Override
     public @NotNull List<String> getProvidedPlugins() {

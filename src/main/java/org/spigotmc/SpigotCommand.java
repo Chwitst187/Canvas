@@ -35,6 +35,7 @@ public class SpigotCommand extends Command {
             .build()
         );
 
+        io.papermc.paper.threadedregions.RegionizedServer.getInstance().addTask(() -> { // Folia - region threading
         MinecraftServer console = MinecraftServer.getServer();
         org.spigotmc.SpigotConfig.init((File) console.options.valueOf("spigot-settings"));
         for (ServerLevel world : console.getAllLevels()) {
@@ -43,6 +44,7 @@ public class SpigotCommand extends Command {
         console.server.reloadCount++;
 
         Command.broadcastCommandMessage(sender, text("Reload complete.", NamedTextColor.GREEN));
+        }); // Folia - region threading
         
 
         return true;

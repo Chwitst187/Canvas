@@ -12,6 +12,7 @@ public class CraftWaterMob extends CraftCreature implements WaterMob {
 
     @Override
     public WaterAnimal getHandle() {
+        ca.spottedleaf.moonrise.common.util.TickThread.ensureTickThread(this.entity, "Accessing entity state off owning region's thread"); // Folia - region threading
         return (WaterAnimal) this.entity;
     }
 }

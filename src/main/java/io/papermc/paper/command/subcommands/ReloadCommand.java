@@ -16,7 +16,9 @@ import static net.kyori.adventure.text.format.NamedTextColor.RED;
 public final class ReloadCommand implements PaperSubcommand {
     @Override
     public boolean execute(final CommandSender sender, final String subCommand, final String[] args) {
+        io.papermc.paper.threadedregions.RegionizedServer.getInstance().addTask(() -> { // Folia - region threading
         this.doReload(sender);
+        }); // Folia - region threading
         return true;
     }
 

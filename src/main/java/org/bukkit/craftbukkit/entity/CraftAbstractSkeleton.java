@@ -12,6 +12,7 @@ public abstract class CraftAbstractSkeleton extends CraftMonster implements Abst
 
     @Override
     public net.minecraft.world.entity.monster.skeleton.AbstractSkeleton getHandle() {
+        ca.spottedleaf.moonrise.common.util.TickThread.ensureTickThread(this.entity, "Accessing entity state off owning region's thread"); // Folia - region threading
         return (net.minecraft.world.entity.monster.skeleton.AbstractSkeleton) this.entity;
     }
 

@@ -393,7 +393,7 @@ public class SpigotWorldConfig {
         this.otherMultiplier = (float) this.getDouble("hunger.other-multiplier", 0.0);
     }
 
-    public int currentPrimedTnt = 0;
+    //public int currentPrimedTnt = 0; // Folia - region threading - moved to regionised world data
     public int maxTntTicksPerTick;
     private void maxTntPerTick() {
         if (SpigotConfig.version < 7) {

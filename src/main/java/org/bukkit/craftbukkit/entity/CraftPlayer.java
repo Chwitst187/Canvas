@@ -245,6 +245,34 @@ public class CraftPlayer extends CraftHumanEntity implements Player, PluginMessa
     private BorderChangeListener clientWorldBorderListener = this.createWorldBorderListener();
     private long lastSaveTime; // Paper - getLastPlayed replacement API
     private @Nullable CraftScoreboard scoreboardOverride;
+    public final net.minecraft.network.PacketProcessor packetProcessor = new net.minecraft.network.PacketProcessor(null); // Folia
+
+    // Folia start - region threading
+    // used only to notify tasks for packets
+    private volatile io.papermc.paper.threadedregions.RegionizedWorldData lastRegion;
+
+    public void stopAcceptingPackets() {
+        this.packetProcessor.close();
+    }
+
+    public void updateRegion(final io.papermc.paper.threadedregions.RegionizedWorldData region) {
+        this.lastRegion = region;
+        if (region != null && this.packetProcessor.hasPackets()) {
+            region.regionData.setHasPackets();
+        }
+    }
+
+    public <T extends net.minecraft.network.PacketListener> void schedulePacket(T listener, net.minecraft.network.protocol.Packet<T> packet) {
+        if (!this.packetProcessor.scheduleIfPossible(listener, packet)) {
+            return;
+        }
+
+        final io.papermc.paper.threadedregions.RegionizedWorldData region = this.lastRegion;
+        if (region != null) {
+            region.regionData.setHasPackets();
+        }
+    }
+    // Folia end - region threading
 
     public CraftPlayer(CraftServer server, ServerPlayer entity) {
         super(server, entity);
@@ -254,7 +282,7 @@ public class CraftPlayer extends CraftHumanEntity implements Player, PluginMessa
 
     @Override
     public ServerPlayer getHandle() {
-        return (ServerPlayer) this.entity;
+        return (ServerPlayer) this.entity; // Folia - region threading - no checks for players, as it's a total mess
     }
 
     @Override
@@ -653,13 +681,13 @@ public class CraftPlayer extends CraftHumanEntity implements Player, PluginMessa
 
     @Override
     public void kickPlayer(String message) {
-        org.spigotmc.AsyncCatcher.catchOp("player kick"); // Spigot
+        //org.spigotmc.AsyncCatcher.catchOp("player kick"); // Spigot // Folia - thread-safe now, as it will simply delay the kick
         this.getHandle().connection.disconnect(CraftChatMessage.fromStringOrEmpty(message, true), org.bukkit.event.player.PlayerKickEvent.Cause.PLUGIN); // Paper - kick event cause
     }
 
     @Override
     public void kick(net.kyori.adventure.text.Component message, org.bukkit.event.player.PlayerKickEvent.Cause cause) {
-        org.spigotmc.AsyncCatcher.catchOp("player kick");
+        //org.spigotmc.AsyncCatcher.catchOp("player kick"); // Folia - region threading - no longer needed
         final ServerGamePacketListenerImpl connection = this.getHandle().connection;
         if (connection != null) {
             connection.disconnect(message == null ? net.kyori.adventure.text.Component.empty() : message, cause);
@@ -1304,6 +1332,11 @@ public class CraftPlayer extends CraftHumanEntity implements Player, PluginMessa
 
     @Override
     protected boolean teleport0(Location location, org.bukkit.event.player.PlayerTeleportEvent.TeleportCause cause, io.papermc.paper.entity.TeleportFlag... flags) {
+        // Folia start - region threading
+        if (true) {
+            throw new UnsupportedOperationException("Must use teleportAsync while in region threading");
+        }
+        // Folia end - region threading
         if (this.getHandle().connection == null) {
             return false;
         }
@@ -1878,7 +1911,7 @@ public class CraftPlayer extends CraftHumanEntity implements Player, PluginMessa
     private void unregisterEntity(Entity other) {
         // Paper end
         ChunkMap tracker = ((ServerLevel) this.getHandle().level()).getChunkSource().chunkMap;
-        ChunkMap.TrackedEntity entry = tracker.entityMap.get(other.getId());
+        ChunkMap.TrackedEntity entry = other.moonrise$getTrackedEntity(); // Folia - region threading
         if (entry != null) {
             entry.removePlayer(this.getHandle());
         }
@@ -1967,7 +2000,7 @@ public class CraftPlayer extends CraftHumanEntity implements Player, PluginMessa
             if (original != null) otherPlayer.setUUID(original); // Paper - uuid override
         }
 
-        ChunkMap.TrackedEntity entry = tracker.entityMap.get(other.getId());
+        ChunkMap.TrackedEntity entry = other.moonrise$getTrackedEntity(); // Folia - region threading
         if (entry != null && !entry.seenBy.contains(this.getHandle().connection)) {
             entry.updatePlayer(this.getHandle());
         }
@@ -3029,8 +3062,7 @@ public class CraftPlayer extends CraftHumanEntity implements Player, PluginMessa
         @Override
         public void respawn() {
             if (CraftPlayer.this.getHealth() <= 0 && CraftPlayer.this.isOnline()) {
-                CraftPlayer.this.server.getServer().getPlayerList().respawn(CraftPlayer.this.getHandle(), false, Entity.RemovalReason.KILLED, org.bukkit.event.player.PlayerRespawnEvent.RespawnReason.PLUGIN);
-                CraftPlayer.this.getHandle().connection.restartClientLoadTimerAfterRespawn();
+                CraftPlayer.this.getHandle().respawn(null, org.bukkit.event.player.PlayerRespawnEvent.RespawnReason.PLUGIN); // Folia - region threading
             }
         }
 

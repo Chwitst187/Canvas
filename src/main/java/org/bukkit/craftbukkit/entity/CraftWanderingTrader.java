@@ -12,6 +12,7 @@ public class CraftWanderingTrader extends CraftAbstractVillager implements Wande
 
     @Override
     public net.minecraft.world.entity.npc.wanderingtrader.WanderingTrader getHandle() {
+        ca.spottedleaf.moonrise.common.util.TickThread.ensureTickThread(this.entity, "Accessing entity state off owning region's thread"); // Folia - region threading
         return (net.minecraft.world.entity.npc.wanderingtrader.WanderingTrader) this.entity;
     }
 

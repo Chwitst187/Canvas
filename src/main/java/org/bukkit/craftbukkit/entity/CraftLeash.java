@@ -14,6 +14,7 @@ public class CraftLeash extends CraftBlockAttachedEntity implements LeashHitch {
 
     @Override
     public LeashFenceKnotEntity getHandle() {
+        ca.spottedleaf.moonrise.common.util.TickThread.ensureTickThread(this.entity, "Accessing entity state off owning region's thread"); // Folia - region threading
         return (LeashFenceKnotEntity) this.entity;
     }
 

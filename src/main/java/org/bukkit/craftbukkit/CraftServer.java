@@ -307,7 +307,7 @@ public final class CraftServer implements Server {
     private final ServerConfiguration serverConfig = new PaperServerConfiguration();
 
     // Paper start - Folia region threading API
-    private final io.papermc.paper.threadedregions.scheduler.FallbackRegionScheduler regionizedScheduler = new io.papermc.paper.threadedregions.scheduler.FallbackRegionScheduler();
+    private final io.papermc.paper.threadedregions.scheduler.FoliaRegionScheduler regionizedScheduler = new io.papermc.paper.threadedregions.scheduler.FoliaRegionScheduler(); // Folia - region threading
     private final io.papermc.paper.threadedregions.scheduler.FoliaAsyncScheduler asyncScheduler = new io.papermc.paper.threadedregions.scheduler.FoliaAsyncScheduler();
     private final io.papermc.paper.threadedregions.scheduler.FoliaGlobalRegionScheduler globalRegionScheduler = new io.papermc.paper.threadedregions.scheduler.FoliaGlobalRegionScheduler();
 
@@ -384,7 +384,7 @@ public final class CraftServer implements Server {
 
     @Override
     public final boolean isGlobalTickThread() {
-        return ca.spottedleaf.moonrise.common.util.TickThread.isTickThread();
+        return io.papermc.paper.threadedregions.RegionizedServer.isGlobalTickThread(); // Folia - region threading API
     }
     // Paper end - Folia reagion threading API
 
@@ -919,11 +919,44 @@ public final class CraftServer implements Server {
         return this.playerList;
     }
 
+    // Folia start - region threading
+    public void dispatchCmdAsync(CommandSender sender, String commandLine) {
+        if ((sender instanceof Entity entity)) {
+            ((org.bukkit.craftbukkit.entity.CraftEntity)entity).taskScheduler.schedule(
+                (nmsEntity) -> {
+                    CraftServer.this.dispatchCommand(nmsEntity.getBukkitEntity(), commandLine);
+                },
+                null,
+                1L
+            );
+        } else if (sender instanceof ConsoleCommandSender || sender instanceof io.papermc.paper.commands.FeedbackForwardingSender) {
+            io.papermc.paper.threadedregions.RegionizedServer.getInstance().addTask(() -> {
+                CraftServer.this.dispatchCommand(sender, commandLine);
+            });
+        } else {
+            // huh?
+            throw new UnsupportedOperationException("Dispatching command for " + sender);
+        }
+    }
+    // Folia end - region threading
+
     @Override
     public boolean dispatchCommand(CommandSender rawSender, String commandLine) {
         Preconditions.checkArgument(rawSender != null, "sender cannot be null");
         Preconditions.checkArgument(commandLine != null, "commandLine cannot be null");
         org.spigotmc.AsyncCatcher.catchOp("Command Dispatched Async: " + commandLine); // Spigot // Paper - Include command in error message
+        // Folia start - region threading
+        if ((rawSender instanceof Entity entity)) {
+            ca.spottedleaf.moonrise.common.util.TickThread.ensureTickThread(((org.bukkit.craftbukkit.entity.CraftEntity)entity).getHandle(), "Dispatching command async");
+        } else if (rawSender instanceof ConsoleCommandSender || rawSender instanceof net.minecraft.server.rcon.RconConsoleSource
+                || rawSender instanceof org.bukkit.craftbukkit.command.CraftRemoteConsoleCommandSender
+                || rawSender instanceof io.papermc.paper.commands.FeedbackForwardingSender) {
+            io.papermc.paper.threadedregions.RegionizedServer.ensureGlobalTickThread("Dispatching command async");
+        } else {
+            // huh?
+            throw new UnsupportedOperationException("Dispatching command for " + rawSender);
+        }
+        // Folia end - region threading
         CommandSourceStack sourceStack = VanillaCommandWrapper.getListener(rawSender);
 
         String command = StringUtils.normalizeSpace(commandLine.trim());
@@ -1173,6 +1206,7 @@ public final class CraftServer implements Server {
 
     @Override
     public World createWorld(WorldCreator creator) {
+        if (true) throw new UnsupportedOperationException(); // Folia - not implemented properly yet
         Preconditions.checkState(this.console.getAllLevels().iterator().hasNext(), "Cannot create additional worlds on STARTUP");
         //Preconditions.checkState(!this.console.isIteratingOverLevels, "Cannot create a world while worlds are being ticked"); // Paper - Cat - Temp disable. We'll see how this goes.
         Preconditions.checkArgument(creator != null, "WorldCreator cannot be null");
@@ -1323,6 +1357,7 @@ public final class CraftServer implements Server {
 
     @Override
     public boolean unloadWorld(World world, boolean save) {
+        if (true) throw new UnsupportedOperationException(); // Folia - not implemented properly yet
         //Preconditions.checkState(!this.console.isIteratingOverLevels, "Cannot unload a world while worlds are being ticked"); // Paper - Cat - Temp disable. We'll see how this goes.
         if (world == null) {
             return false;
@@ -2702,8 +2737,23 @@ public final class CraftServer implements Server {
 
     @Override
     public double getAverageTickTime() {
-        final TickData.MSPTData reportData = this.getServer().getMSPTData5s();
-        return reportData == null ? 0.0 : reportData.avg();
+        // Folia start - region threading
+        ca.spottedleaf.concurrentutil.scheduler.SchedulableTick task = io.papermc.paper.threadedregions.TickRegionScheduler.getCurrentTickingTask();
+        if (task == null) {
+            // might be on the shutdown thread, try retrieving the current region
+            if (io.papermc.paper.threadedregions.TickRegionScheduler.getCurrentRegion() != null) {
+                // we are on the shutdown thread
+                task = io.papermc.paper.threadedregions.TickRegionScheduler.getCurrentRegion().getData().getRegionSchedulingHandle();
+            }
+        }
+        if (!(task instanceof io.papermc.paper.threadedregions.TickRegionScheduler.RegionScheduleHandle tickHandle)) {
+            throw new UnsupportedOperationException("Not on any region");
+        }
+
+
+        long currTime = System.nanoTime();
+        return tickHandle.getTickReport5s(currTime).timePerTickData().segmentAll().average() / 1.0E6;
+        // Folia end - region threading
     }
 
     private final org.bukkit.Server.Spigot spigot = new org.bukkit.Server.Spigot() {
@@ -2760,7 +2810,27 @@ public final class CraftServer implements Server {
 
     @Override
     public double[] getTPS() {
-        return this.getServer().getTPS();
+        // Folia start - region threading
+        ca.spottedleaf.concurrentutil.scheduler.SchedulableTick task = io.papermc.paper.threadedregions.TickRegionScheduler.getCurrentTickingTask();
+        if (task == null) {
+            // might be on the shutdown thread, try retrieving the current region
+            if (io.papermc.paper.threadedregions.TickRegionScheduler.getCurrentRegion() != null) {
+                // we are on the shutdown thread
+                task = io.papermc.paper.threadedregions.TickRegionScheduler.getCurrentRegion().getData().getRegionSchedulingHandle();
+            }
+        }
+        if (!(task instanceof io.papermc.paper.threadedregions.TickRegionScheduler.RegionScheduleHandle tickHandle)) {
+            throw new UnsupportedOperationException("Not on any region");
+        }
+
+        // 1m, 5m, 15m
+        long currTime = System.nanoTime();
+        return new double[] {
+                tickHandle.getTickReport1m(currTime).tpsData().segmentAll().average(),
+                tickHandle.getTickReport5m(currTime).tpsData().segmentAll().average(),
+                tickHandle.getTickReport15m(currTime).tpsData().segmentAll().average(),
+        };
+        // Folia end - region threading
     }
 
     @Override
@@ -2930,7 +3000,7 @@ public final class CraftServer implements Server {
 
     @Override
     public int getCurrentTick() {
-        return net.minecraft.server.MinecraftServer.currentTick;
+        return (int)io.papermc.paper.threadedregions.RegionizedServer.getCurrentTick(); // Folia - region threading
     }
 
     @Override

@@ -501,6 +501,7 @@ public class WorldConfiguration extends ConfigurationPart {
     public Chunks chunks;
 
     public class Chunks extends ConfigurationPart {
+
         public AutosavePeriod autoSaveInterval = AutosavePeriod.def();
         public int maxAutoSaveChunksPerTick = 24;
         public int fixedChunkInhabitedTime = -1;
@@ -519,6 +520,7 @@ public class WorldConfiguration extends ConfigurationPart {
 
         @PostProcess
         private void postProcess() {
+            this.preventMovingIntoUnloadedChunks = true; // Folia - region threading - force prevent moving into unloaded chunks
             FeatureHooks.setPlayerChunkUnloadDelay(this.delayChunkUnloadsBy.ticks());
         }
     }

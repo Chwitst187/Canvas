@@ -196,14 +196,14 @@ public final class CraftBlockStates {
         BlockPos pos = craftBlock.getPosition();
         net.minecraft.world.level.block.state.BlockState state = craftBlock.getNMS();
         BlockEntity blockEntity = craftBlock.getHandle().getBlockEntity(pos);
-        boolean prev = CraftBlockEntityState.DISABLE_SNAPSHOT;
-        CraftBlockEntityState.DISABLE_SNAPSHOT = !useSnapshot;
+        boolean prev = CraftBlockEntityState.DISABLE_SNAPSHOT.get().booleanValue(); // Folia - region threading
+        CraftBlockEntityState.DISABLE_SNAPSHOT.set(Boolean.valueOf(!useSnapshot)); // Folia - region threading
         try {
             CraftBlockState blockState = CraftBlockStates.getBlockState(world, pos, state, blockEntity);
             blockState.setWorldHandle(craftBlock.getHandle()); // Inject the block's generator access
             return blockState;
         } finally {
-            CraftBlockEntityState.DISABLE_SNAPSHOT = prev;
+            CraftBlockEntityState.DISABLE_SNAPSHOT.set(Boolean.valueOf(prev)); // Folia - region threading
         }
     }
 

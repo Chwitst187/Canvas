@@ -18,7 +18,9 @@ import static net.kyori.adventure.text.format.NamedTextColor.YELLOW;
 public final class HeapDumpCommand implements PaperSubcommand {
     @Override
     public boolean execute(final CommandSender sender, final String subCommand, final String[] args) {
+        io.papermc.paper.threadedregions.RegionizedServer.getInstance().addTask(() -> { // Folia - region threading
         this.dumpHeap(sender);
+        }); // Folia - region threading
         return true;
     }
 

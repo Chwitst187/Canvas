@@ -12,6 +12,7 @@ public class CraftAxolotl extends CraftAnimals implements Axolotl, io.papermc.pa
 
     @Override
     public net.minecraft.world.entity.animal.axolotl.Axolotl getHandle() {
+        ca.spottedleaf.moonrise.common.util.TickThread.ensureTickThread(this.entity, "Accessing entity state off owning region's thread"); // Folia - region threading
         return (net.minecraft.world.entity.animal.axolotl.Axolotl) this.entity;
     }
 

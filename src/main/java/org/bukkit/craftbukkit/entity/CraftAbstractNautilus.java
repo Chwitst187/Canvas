@@ -15,6 +15,7 @@ public class CraftAbstractNautilus extends CraftTameableAnimal implements org.bu
 
     @Override
     public AbstractNautilus getHandle() {
+        ca.spottedleaf.moonrise.common.util.TickThread.ensureTickThread(this.entity, "Accessing entity state off owning region's thread"); // Folia - region threading
         return (AbstractNautilus) this.entity;
     }
 

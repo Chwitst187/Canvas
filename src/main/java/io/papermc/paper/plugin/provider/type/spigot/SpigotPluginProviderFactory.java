@@ -35,6 +35,11 @@ class SpigotPluginProviderFactory implements PluginTypeFactory<SpigotPluginProvi
 
     @Override
     public SpigotPluginProvider build(JarFile file, PluginDescriptionFile configuration, Path source) throws InvalidDescriptionException {
+        // Folia start - block plugins not marked as supported
+        if (!configuration.isFoliaSupported()) {
+            throw new RuntimeException("Could not load plugin '" + configuration.getDisplayName() + "' as it is not marked as supporting Folia!");
+        }
+        // Folia end - block plugins not marked as supported
         // Copied from SimplePluginManager#loadPlugins
         // Spigot doesn't validate the name when the config is created, and instead when the plugin is loaded.
         // Paper plugin configuration will do these checks in config serializer instead of when this is created.
@@ -81,4 +86,3 @@ class SpigotPluginProviderFactory implements PluginTypeFactory<SpigotPluginProvi
         return descriptionFile;
     }
 }
-

@@ -13,6 +13,7 @@ public class CraftCamel extends CraftAbstractHorse implements Camel {
 
     @Override
     public net.minecraft.world.entity.animal.camel.Camel getHandle() {
+        ca.spottedleaf.moonrise.common.util.TickThread.ensureTickThread(this.entity, "Accessing entity state off owning region's thread"); // Folia - region threading
         return (net.minecraft.world.entity.animal.camel.Camel) this.entity;
     }
 

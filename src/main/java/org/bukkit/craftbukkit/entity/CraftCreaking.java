@@ -19,6 +19,7 @@ public class CraftCreaking extends CraftMonster implements org.bukkit.entity.Cre
 
     @Override
     public Creaking getHandle() {
+        ca.spottedleaf.moonrise.common.util.TickThread.ensureTickThread(this.entity, "Accessing entity state off owning region's thread"); // Folia - region threading
         return (Creaking) this.entity;
     }
 

@@ -12,6 +12,7 @@ public class CraftSheep extends CraftAnimals implements Sheep, io.papermc.paper.
 
     @Override
     public net.minecraft.world.entity.animal.sheep.Sheep getHandle() {
+        ca.spottedleaf.moonrise.common.util.TickThread.ensureTickThread(this.entity, "Accessing entity state off owning region's thread"); // Folia - region threading
         return (net.minecraft.world.entity.animal.sheep.Sheep) this.entity;
     }
 

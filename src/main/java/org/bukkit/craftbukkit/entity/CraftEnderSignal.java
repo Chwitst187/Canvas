@@ -18,6 +18,7 @@ public class CraftEnderSignal extends CraftEntity implements EnderSignal {
 
     @Override
     public EyeOfEnder getHandle() {
+        ca.spottedleaf.moonrise.common.util.TickThread.ensureTickThread(this.entity, "Accessing entity state off owning region's thread"); // Folia - region threading
         return (EyeOfEnder) this.entity;
     }
 

@@ -21,6 +21,7 @@ public class CraftItem extends CraftEntity implements Item {
 
     @Override
     public ItemEntity getHandle() {
+        ca.spottedleaf.moonrise.common.util.TickThread.ensureTickThread(this.entity, "Accessing entity state off owning region's thread"); // Folia - region threading
         return (ItemEntity) this.entity;
     }
 

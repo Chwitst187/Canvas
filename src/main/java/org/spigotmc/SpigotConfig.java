@@ -183,7 +183,7 @@ public class SpigotConfig {
         SpigotConfig.restartOnCrash = SpigotConfig.getBoolean("settings.restart-on-crash", SpigotConfig.restartOnCrash);
         SpigotConfig.restartScript = SpigotConfig.getString("settings.restart-script", SpigotConfig.restartScript);
         SpigotConfig.restartMessage = SpigotConfig.transform(SpigotConfig.getString("messages.restart", "Server is restarting"));
-        SpigotConfig.commands.put("restart", new RestartCommand("restart"));
+        //SpigotConfig.commands.put("restart", new RestartCommand("restart")); // Folia - region threading
     }
 
     public static boolean bungee;
@@ -229,7 +229,7 @@ public class SpigotConfig {
     }
 
     private static void tpsCommand() {
-        SpigotConfig.commands.put("tps", new TicksPerSecondCommand("tps"));
+        //SpigotConfig.commands.put("tps", new TicksPerSecondCommand("tps")); // Folia - region threading
     }
 
     public static int playerSample;

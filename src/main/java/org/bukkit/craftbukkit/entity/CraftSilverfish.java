@@ -11,6 +11,7 @@ public class CraftSilverfish extends CraftMonster implements Silverfish {
 
     @Override
     public net.minecraft.world.entity.monster.Silverfish getHandle() {
+        ca.spottedleaf.moonrise.common.util.TickThread.ensureTickThread(this.entity, "Accessing entity state off owning region's thread"); // Folia - region threading
         return (net.minecraft.world.entity.monster.Silverfish) this.entity;
     }
 }

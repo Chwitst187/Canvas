@@ -22,7 +22,7 @@ public enum ActivationType {
     RAIDER,
     MISC;
 
-    AABB boundingBox = new AABB(0, 0, 0, 0, 0, 0);
+    //AABB boundingBox = new AABB(0, 0, 0, 0, 0, 0); // Folia - threaded regions - replaced by local variable
 
     /**
      * Returns the activation type for the given entity.

@@ -16,6 +16,7 @@ public class CraftStrider extends CraftAnimals implements Strider {
 
     @Override
     public net.minecraft.world.entity.monster.Strider getHandle() {
+        ca.spottedleaf.moonrise.common.util.TickThread.ensureTickThread(this.entity, "Accessing entity state off owning region's thread"); // Folia - region threading
         return (net.minecraft.world.entity.monster.Strider) this.entity;
     }
 

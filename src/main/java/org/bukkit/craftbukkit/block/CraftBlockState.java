@@ -219,6 +219,12 @@ public class CraftBlockState implements BlockState {
         LevelAccessor access = this.getWorldHandle();
         CraftBlock block = this.getBlock();
 
+        // Folia start - region threading
+        if (access instanceof net.minecraft.server.level.ServerLevel serverWorld) {
+            ca.spottedleaf.moonrise.common.util.TickThread.ensureTickThread(serverWorld, position, "Cannot modify world asynchronously");
+        }
+        // Folia end - region threading
+
         if (block.getType() != this.getType()) {
             if (!force) {
                 return false;
@@ -366,6 +372,9 @@ public class CraftBlockState implements BlockState {
 
     @Override
     public java.util.Collection<org.bukkit.inventory.ItemStack> getDrops(org.bukkit.inventory.ItemStack item, org.bukkit.entity.Entity entity) {
+        // Folia start - region threading
+        ca.spottedleaf.moonrise.common.util.TickThread.ensureTickThread(world.getHandle(), position, "Cannot modify world asynchronously");
+        // Folia end - region threading
         this.requirePlaced();
         net.minecraft.world.item.ItemStack nms = org.bukkit.craftbukkit.inventory.CraftItemStack.asNMSCopy(item);
 

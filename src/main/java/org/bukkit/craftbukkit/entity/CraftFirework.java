@@ -20,6 +20,7 @@ public class CraftFirework extends CraftProjectile implements Firework {
 
     @Override
     public FireworkRocketEntity getHandle() {
+        ca.spottedleaf.moonrise.common.util.TickThread.ensureTickThread(this.entity, "Accessing entity state off owning region's thread"); // Folia - region threading
         return (FireworkRocketEntity) this.entity;
     }
 

@@ -107,6 +107,11 @@ public abstract class CraftEntity implements org.bukkit.entity.Entity {
         return this.apiScheduler;
     };
     // Paper end - Folia schedulers
+    // Folia start - region threading
+    public boolean isPurged() {
+        return this.taskScheduler.isRetiredOffThread();
+    }
+    // Folia end - region threading
 
     public CraftEntity(final CraftServer server, final Entity entity) {
         this.server = server;
@@ -141,6 +146,7 @@ public abstract class CraftEntity implements org.bukkit.entity.Entity {
     }
 
     public Entity getHandle() {
+        ca.spottedleaf.moonrise.common.util.TickThread.ensureTickThread(this.entity, "Accessing entity state off owning region's thread"); // Folia - region threading
         return this.entity;
     }
 
@@ -298,6 +304,11 @@ public abstract class CraftEntity implements org.bukkit.entity.Entity {
     }
 
     protected boolean teleport0(Location location, TeleportCause cause, TeleportFlag... flags) {
+        // Folia start - region threading
+        if (true) {
+            throw new UnsupportedOperationException("Must use teleportAsync while in region threading");
+        }
+        // Folia end - region threading
         Entity entity = this.getHandle();
         if (!entity.isAlive() || !entity.valid) {
             return false;
@@ -734,7 +745,7 @@ public abstract class CraftEntity implements org.bukkit.entity.Entity {
         ImmutableSet.Builder<Player> players = ImmutableSet.builder();
 
         ServerLevel world = ((CraftWorld) this.getWorld()).getHandle();
-        ChunkMap.TrackedEntity entityTracker = world.getChunkSource().chunkMap.entityMap.get(this.getEntityId());
+        ChunkMap.TrackedEntity entityTracker = this.getHandle().moonrise$getTrackedEntity(); // Folia - region threading
 
         if (entityTracker != null) {
             for (ServerPlayerConnection connection : entityTracker.seenBy) {
@@ -751,7 +762,7 @@ public abstract class CraftEntity implements org.bukkit.entity.Entity {
         Preconditions.checkArgument(player != null, "Player cannot be null");
 
         ServerLevel world = ((CraftWorld) this.getWorld()).getHandle();
-        ChunkMap.TrackedEntity entityTracker = world.getChunkSource().chunkMap.entityMap.get(this.getEntityId());
+        ChunkMap.TrackedEntity entityTracker = this.getHandle().moonrise$getTrackedEntity(); // Folia - region threading
         if (entityTracker == null) return false;
 
         return entityTracker.seenBy.contains(((CraftPlayer) player).getHandle().connection);
@@ -1066,7 +1077,7 @@ public abstract class CraftEntity implements org.bukkit.entity.Entity {
         }
 
         ServerLevel world = ((CraftWorld) this.getWorld()).getHandle();
-        ChunkMap.TrackedEntity entityTracker = world.getChunkSource().chunkMap.entityMap.get(this.getEntityId());
+        ChunkMap.TrackedEntity entityTracker = this.getHandle().moonrise$getTrackedEntity(); // Folia - region threading
 
         if (entityTracker == null) {
             return;
@@ -1083,7 +1094,7 @@ public abstract class CraftEntity implements org.bukkit.entity.Entity {
         }
 
         ServerLevel world = ((CraftWorld) this.getWorld()).getHandle();
-        ChunkMap.TrackedEntity entityTracker = world.getChunkSource().chunkMap.entityMap.get(this.getEntityId());
+        ChunkMap.TrackedEntity entityTracker = this.entity.moonrise$getTrackedEntity(); // Folia - region threading
 
         if (entityTracker == null) {
             return;
@@ -1119,26 +1130,43 @@ public abstract class CraftEntity implements org.bukkit.entity.Entity {
         location.checkFinite();
         Location locationClone = location.clone(); // clone so we don't need to worry about mutations after this call.
 
-        ServerLevel world = ((CraftWorld)locationClone.getWorld()).getHandle();
-        CompletableFuture<Boolean> ret = new CompletableFuture<>();
+        // Folia start - region threading
+        java.util.concurrent.CompletableFuture<Boolean> ret = new java.util.concurrent.CompletableFuture<>();
+        java.util.function.Consumer<Entity> run = (Entity nmsEntity) -> {
+            boolean success = nmsEntity.teleportAsync(
+                ((CraftWorld)locationClone.getWorld()).getHandle(),
+                new net.minecraft.world.phys.Vec3(locationClone.getX(), locationClone.getY(), locationClone.getZ()),
+                locationClone.getYaw(), locationClone.getPitch(), net.minecraft.world.phys.Vec3.ZERO,
+                cause == null ? TeleportCause.UNKNOWN : cause,
+                Entity.TELEPORT_FLAG_LOAD_CHUNK | Entity.TELEPORT_FLAG_TELEPORT_PASSENGERS, // preserve behavior with old API: dismount the entity so it can teleport
+                (Entity entityTp) -> {
+                    ret.complete(Boolean.TRUE);
+                }
+            );
+            if (!success) {
+                ret.complete(Boolean.FALSE);
+            }
+        };
+        if (org.bukkit.Bukkit.isOwnedByCurrentRegion(this)) {
+            run.accept(this.getHandle());
+            return ret;
+        }
+        boolean scheduled = this.taskScheduler.schedule(
+            // success
+            run,
+            // retired
+            (Entity nmsEntity) -> {
+                ret.complete(Boolean.FALSE);
+            },
+            1L
+        );
 
-        world.loadChunksForMoveAsync(this.getHandle().getBoundingBoxAt(locationClone.getX(), locationClone.getY(), locationClone.getZ()),
-            this instanceof CraftPlayer ? ca.spottedleaf.concurrentutil.util.Priority.HIGHER : ca.spottedleaf.concurrentutil.util.Priority.NORMAL, (chunks) -> {
-                MinecraftServer.getServer().scheduleOnMain(() -> {
-                    final ServerChunkCache chunkCache = world.getChunkSource();
-                    for (final net.minecraft.world.level.chunk.ChunkAccess chunk : chunks) {
-                        chunkCache.addTicketAtLevel(TicketType.POST_TELEPORT, chunk.getPos(), ChunkLevel.FULL_CHUNK_LEVEL);
-                    }
-                    try {
-                        ret.complete(CraftEntity.this.teleport0(locationClone, cause, teleportFlags) ? Boolean.TRUE : Boolean.FALSE);
-                    } catch (Throwable throwable) {
-                        MinecraftServer.LOGGER.error("Failed to teleport entity {}", CraftEntity.this, throwable);
-                        ret.completeExceptionally(throwable);
-                    }
-                });
-            });
+        if (!scheduled) {
+            ret.complete(Boolean.FALSE);
+        }
 
         return ret;
+        // Folia end - region threading
     }
     // Paper end - more teleport API / async chunk API
 
@@ -1211,8 +1239,7 @@ public abstract class CraftEntity implements org.bukkit.entity.Entity {
 
     @Override
     public Set<org.bukkit.entity.Player> getTrackedPlayers() {
-        ServerLevel world = (net.minecraft.server.level.ServerLevel)this.entity.level();
-        ChunkMap.TrackedEntity tracker = world == null ? null : world.getChunkSource().chunkMap.entityMap.get(this.entity.getId());
+        ChunkMap.TrackedEntity tracker = this.entity.moonrise$getTrackedEntity(); // Folia - region threading
         if (tracker == null) {
             return java.util.Collections.emptySet();
         }

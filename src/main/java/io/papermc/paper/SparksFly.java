@@ -33,13 +33,13 @@ public final class SparksFly {
 
     private final Logger logger;
     private final PaperSparkModule spark;
-    private final ConcurrentLinkedQueue<Runnable> mainThreadTaskQueue;
+    // Folia - region threading
 
     private boolean enabled;
     private boolean disabledInConfigurationWarningLogged;
 
     public SparksFly(final Server server) {
-        this.mainThreadTaskQueue = new ConcurrentLinkedQueue<>();
+        // Folia - region threading
         this.logger = Logger.getLogger(ID);
         this.logger.log(Level.INFO, "This server bundles the spark profiler. For more information please visit https://docs.papermc.io/paper/profiling");
         this.spark = PaperSparkModule.create(Compatibility.VERSION_1_0, server, this.logger, new PaperScheduler() {
@@ -50,7 +50,7 @@ public final class SparksFly {
 
             @Override
             public void executeSync(final Runnable runnable) {
-                SparksFly.this.mainThreadTaskQueue.offer(this.catching(runnable, "synchronous"));
+                io.papermc.paper.threadedregions.RegionizedServer.getInstance().addTask(this.catching(runnable, "synchronous")); // Folia - region threading
             }
 
             private Runnable catching(final Runnable runnable, final String type) {
@@ -88,10 +88,7 @@ public final class SparksFly {
     }
 
     public void executeMainThreadTasks() {
-        Runnable task;
-        while ((task = this.mainThreadTaskQueue.poll()) != null) {
-            task.run();
-        }
+        throw new UnsupportedOperationException(); // Folia - region threading
     }
 
     public void enableEarlyIfRequested() {
@@ -119,7 +116,7 @@ public final class SparksFly {
 
     private void enable() {
         if (!this.enabled) {
-            if (GlobalConfiguration.get().spark.enabled) {
+            if (false) { // Folia - disable in-built spark profiler
                 this.enabled = true;
                 this.spark.enable();
             } else {
@@ -171,7 +168,7 @@ public final class SparksFly {
     }
 
     public static boolean isPluginPreferred() {
-        return Boolean.getBoolean(PREFER_SPARK_PLUGIN_PROPERTY);
+        return true; // Folia - disable in-built spark profiler
     }
 
     private static boolean isPluginEnabled(final Server server) {

@@ -11,6 +11,7 @@ public class CraftIllusioner extends CraftSpellcaster implements Illusioner, com
 
     @Override
     public net.minecraft.world.entity.monster.illager.Illusioner getHandle() {
+        ca.spottedleaf.moonrise.common.util.TickThread.ensureTickThread(this.entity, "Accessing entity state off owning region's thread"); // Folia - region threading
         return (net.minecraft.world.entity.monster.illager.Illusioner) this.entity;
     }
 }

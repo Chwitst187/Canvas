@@ -16,6 +16,7 @@ public class CraftLlama extends CraftChestedHorse implements Llama, com.destroys
 
     @Override
     public net.minecraft.world.entity.animal.equine.Llama getHandle() {
+        ca.spottedleaf.moonrise.common.util.TickThread.ensureTickThread(this.entity, "Accessing entity state off owning region's thread"); // Folia - region threading
         return (net.minecraft.world.entity.animal.equine.Llama) this.entity;
     }
 

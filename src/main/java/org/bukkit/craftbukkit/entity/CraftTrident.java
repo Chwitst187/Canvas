@@ -14,6 +14,7 @@ public class CraftTrident extends CraftAbstractArrow implements Trident {
 
     @Override
     public ThrownTrident getHandle() {
+        ca.spottedleaf.moonrise.common.util.TickThread.ensureTickThread(this.entity, "Accessing entity state off owning region's thread"); // Folia - region threading
         return (ThrownTrident) this.entity;
     }
 

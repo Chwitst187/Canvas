@@ -20,6 +20,7 @@ public class CraftPiglin extends CraftPiglinAbstract implements Piglin, com.dest
 
     @Override
     public net.minecraft.world.entity.monster.piglin.Piglin getHandle() {
+        ca.spottedleaf.moonrise.common.util.TickThread.ensureTickThread(this.entity, "Accessing entity state off owning region's thread"); // Folia - region threading
         return (net.minecraft.world.entity.monster.piglin.Piglin) this.entity;
     }
 

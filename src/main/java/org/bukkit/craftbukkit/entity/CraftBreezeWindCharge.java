@@ -10,6 +10,7 @@ public class CraftBreezeWindCharge extends CraftAbstractWindCharge implements Br
 
     @Override
     public net.minecraft.world.entity.projectile.hurtingprojectile.windcharge.BreezeWindCharge getHandle() {
+        ca.spottedleaf.moonrise.common.util.TickThread.ensureTickThread(this.entity, "Accessing entity state off owning region's thread"); // Folia - region threading
         return (net.minecraft.world.entity.projectile.hurtingprojectile.windcharge.BreezeWindCharge) this.entity;
     }
 }

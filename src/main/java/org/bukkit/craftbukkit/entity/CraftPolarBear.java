@@ -11,6 +11,7 @@ public class CraftPolarBear extends CraftAnimals implements PolarBear {
 
     @Override
     public net.minecraft.world.entity.animal.polarbear.PolarBear getHandle() {
+        ca.spottedleaf.moonrise.common.util.TickThread.ensureTickThread(this.entity, "Accessing entity state off owning region's thread"); // Folia - region threading
         return (net.minecraft.world.entity.animal.polarbear.PolarBear) this.entity;
     }
 

@@ -23,6 +23,7 @@ public abstract class CraftAbstractArrow extends AbstractProjectile implements A
 
     @Override
     public net.minecraft.world.entity.projectile.arrow.AbstractArrow getHandle() {
+        ca.spottedleaf.moonrise.common.util.TickThread.ensureTickThread(this.entity, "Accessing entity state off owning region's thread"); // Folia - region threading
         return (net.minecraft.world.entity.projectile.arrow.AbstractArrow) this.entity;
     }
 

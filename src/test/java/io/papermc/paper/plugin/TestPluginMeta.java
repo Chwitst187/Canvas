@@ -20,6 +20,13 @@ public class TestPluginMeta implements PluginMeta {
         this.identifier = identifier;
     }
 
+    // Folia start - region threading
+    @Override
+    public boolean isFoliaSupported() {
+        return true;
+    }
+    // Folia end - region threading
+
     @Override
     public @NotNull String getName() {
         return this.identifier;

@@ -13,6 +13,7 @@ public abstract class CraftAbstractCow extends CraftAnimals implements AbstractC
 
     @Override
     public net.minecraft.world.entity.animal.cow.AbstractCow getHandle() {
+        ca.spottedleaf.moonrise.common.util.TickThread.ensureTickThread(this.entity, "Accessing entity state off owning region's thread"); // Folia - region threading
         return (net.minecraft.world.entity.animal.cow.AbstractCow) this.entity;
     }
 }

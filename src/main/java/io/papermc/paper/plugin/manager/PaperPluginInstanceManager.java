@@ -265,12 +265,7 @@ class PaperPluginInstanceManager {
                 + pluginName + " (Is it up to date?)", ex, plugin); // Paper
         }
 
-        try {
-            this.server.getScheduler().cancelTasks(plugin);
-        } catch (Throwable ex) {
-            this.handlePluginException("Error occurred (in the plugin loader) while cancelling tasks for "
-                + pluginName + " (Is it up to date?)", ex, plugin); // Paper
-        }
+        // Folia - region threading
 
         // Paper start - Folia schedulers
         try {

@@ -100,6 +100,14 @@ public final class EntityScheduler {
         return this.tickCount == RETIRED_TICK_COUNT;
     }
 
+    // Folia start - region threading
+    public boolean isRetiredOffThread() {
+        synchronized (this.stateLock) {
+            return this.tickCount == RETIRED_TICK_COUNT;
+        }
+    }
+    // Folia end - region threading
+
     /**
      * Retires the scheduler, preventing new tasks from being scheduled and invoking the retired callback
      * on all currently scheduled tasks.

@@ -22,6 +22,7 @@ public class CraftEnderDragon extends CraftMob implements EnderDragon, CraftEnem
 
     @Override
     public net.minecraft.world.entity.boss.enderdragon.EnderDragon getHandle() {
+        ca.spottedleaf.moonrise.common.util.TickThread.ensureTickThread(this.entity, "Accessing entity state off owning region's thread"); // Folia - region threading
         return (net.minecraft.world.entity.boss.enderdragon.EnderDragon) this.entity;
     }
 

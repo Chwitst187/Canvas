@@ -11,6 +11,7 @@ public class CraftMarker extends CraftEntity implements Marker {
 
     @Override
     public net.minecraft.world.entity.Marker getHandle() {
+        ca.spottedleaf.moonrise.common.util.TickThread.ensureTickThread(this.entity, "Accessing entity state off owning region's thread"); // Folia - region threading
         return (net.minecraft.world.entity.Marker) this.entity;
     }
 }

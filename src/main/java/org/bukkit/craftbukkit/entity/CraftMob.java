@@ -23,13 +23,14 @@ public abstract class CraftMob extends CraftLivingEntity implements Mob, io.pape
 
     @Override
     public net.minecraft.world.entity.Mob getHandle() {
+        ca.spottedleaf.moonrise.common.util.TickThread.ensureTickThread(this.entity, "Accessing entity state off owning region's thread"); // Folia - region threading
         return (net.minecraft.world.entity.Mob) this.entity;
     }
 
     @Override
     public void setHandle(net.minecraft.world.entity.Entity entity) {
         super.setHandle(entity);
-        this.paperPathfinder.setHandle(this.getHandle());
+        this.paperPathfinder.setHandle((net.minecraft.world.entity.Mob)this.getHandleRaw()); // Folia - region threading
     }
 
     @Override

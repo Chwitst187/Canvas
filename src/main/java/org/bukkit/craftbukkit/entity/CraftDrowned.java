@@ -11,6 +11,7 @@ public class CraftDrowned extends CraftZombie implements Drowned, com.destroysto
 
     @Override
     public net.minecraft.world.entity.monster.zombie.Drowned getHandle() {
+        ca.spottedleaf.moonrise.common.util.TickThread.ensureTickThread(this.entity, "Accessing entity state off owning region's thread"); // Folia - region threading
         return (net.minecraft.world.entity.monster.zombie.Drowned) this.entity;
     }
 }

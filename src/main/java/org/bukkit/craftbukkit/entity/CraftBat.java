@@ -11,6 +11,7 @@ public class CraftBat extends CraftAmbient implements Bat {
 
     @Override
     public net.minecraft.world.entity.ambient.Bat getHandle() {
+        ca.spottedleaf.moonrise.common.util.TickThread.ensureTickThread(this.entity, "Accessing entity state off owning region's thread"); // Folia - region threading
         return (net.minecraft.world.entity.ambient.Bat) this.entity;
     }
 

@@ -11,6 +11,14 @@ public class CraftEnderDragonPart extends CraftComplexPart implements EnderDrago
         super(server, entity);
     }
 
+    // Folia start - region threading
+    @Override
+    public net.minecraft.world.entity.boss.enderdragon.EnderDragonPart getHandle() {
+        ca.spottedleaf.moonrise.common.util.TickThread.ensureTickThread(this.entity, "Accessing entity state off owning region's thread");
+        return (net.minecraft.world.entity.boss.enderdragon.EnderDragonPart)this.entity;
+    }
+    // Folia end - region threading
+
     @Override
     public EnderDragon getParent() {
         return (EnderDragon) super.getParent();

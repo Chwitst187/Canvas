@@ -83,7 +83,7 @@ public final class ChatProcessor {
             final CraftPlayer player = this.player.getBukkitEntity();
             final AsyncPlayerChatEvent asyncChatEvent = new AsyncPlayerChatEvent(this.async, player, this.craftbukkit$originalMessage, new LazyPlayerSet(this.server));
             this.post(asyncChatEvent);
-            if (listenersOnSyncEvent) {
+            if (false && listenersOnSyncEvent) { // Folia - region threading
                 final PlayerChatEvent chatEvent = new PlayerChatEvent(player, asyncChatEvent.getMessage(), asyncChatEvent.getFormat(), asyncChatEvent.getRecipients());
                 chatEvent.setCancelled(asyncChatEvent.isCancelled()); // propagate cancelled state
                 this.queueIfAsyncOrRunImmediately(new Waitable<>() {
@@ -150,7 +150,7 @@ public final class ChatProcessor {
         ae.setCancelled(cancelled); // propagate cancelled state
         this.post(ae);
         final boolean listenersOnSyncEvent = canYouHearMe(ChatEvent.getHandlerList());
-        if (listenersOnSyncEvent) {
+        if (false && listenersOnSyncEvent) { // Folia - region threading
             this.queueIfAsyncOrRunImmediately(new Waitable<>() {
                 @Override
                 protected Void evaluate() {

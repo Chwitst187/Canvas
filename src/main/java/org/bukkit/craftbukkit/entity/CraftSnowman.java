@@ -12,6 +12,7 @@ public class CraftSnowman extends CraftGolem implements Snowman, com.destroystok
 
     @Override
     public SnowGolem getHandle() {
+        ca.spottedleaf.moonrise.common.util.TickThread.ensureTickThread(this.entity, "Accessing entity state off owning region's thread"); // Folia - region threading
         return (SnowGolem) this.entity;
     }
 

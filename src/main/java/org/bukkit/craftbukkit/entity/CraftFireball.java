@@ -16,6 +16,7 @@ public class CraftFireball extends AbstractProjectile implements Fireball {
 
     @Override
     public AbstractHurtingProjectile getHandle() {
+        ca.spottedleaf.moonrise.common.util.TickThread.ensureTickThread(this.entity, "Accessing entity state off owning region's thread"); // Folia - region threading
         return (AbstractHurtingProjectile) this.entity;
     }
 

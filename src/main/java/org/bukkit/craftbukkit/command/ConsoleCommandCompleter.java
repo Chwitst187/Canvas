@@ -48,7 +48,7 @@ public class ConsoleCommandCompleter implements Completer {
                         return syncEvent.callEvent() ? syncEvent.getCompletions() : com.google.common.collect.ImmutableList.of();
                     }
                 };
-                server.getServer().processQueue.add(syncCompletions);
+                io.papermc.paper.threadedregions.RegionizedServer.getInstance().addTask(syncCompletions); // Folia - region threading
                 try {
                     final List<String> legacyCompletions = syncCompletions.get();
                     completions.removeIf(it -> !legacyCompletions.contains(it.suggestion())); // remove any suggestions that were removed
@@ -80,7 +80,7 @@ public class ConsoleCommandCompleter implements Completer {
                 return tabEvent.isCancelled() ? Collections.emptyList() : tabEvent.getCompletions();
             }
         };
-        server.getServer().processQueue.add(waitable); // Paper - Remove "this."
+        io.papermc.paper.threadedregions.RegionizedServer.getInstance().addTask(waitable); // Folia - region threading
         try {
             List<String> offers = waitable.get();
             if (offers == null) {

@@ -12,6 +12,7 @@ public class CraftFish extends CraftWaterMob implements Fish, io.papermc.paper.e
 
     @Override
     public AbstractFish getHandle() {
+        ca.spottedleaf.moonrise.common.util.TickThread.ensureTickThread(this.entity, "Accessing entity state off owning region's thread"); // Folia - region threading
         return (AbstractFish) this.entity;
     }
 }

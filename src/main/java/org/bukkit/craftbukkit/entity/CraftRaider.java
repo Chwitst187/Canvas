@@ -18,6 +18,7 @@ public abstract class CraftRaider extends CraftMonster implements Raider {
 
     @Override
     public net.minecraft.world.entity.raid.Raider getHandle() {
+        ca.spottedleaf.moonrise.common.util.TickThread.ensureTickThread(this.entity, "Accessing entity state off owning region's thread"); // Folia - region threading
         return (net.minecraft.world.entity.raid.Raider) this.entity;
     }
 

@@ -19,6 +19,7 @@ public class CraftChicken extends CraftAnimals implements Chicken {
 
     @Override
     public net.minecraft.world.entity.animal.chicken.Chicken getHandle() {
+        ca.spottedleaf.moonrise.common.util.TickThread.ensureTickThread(this.entity, "Accessing entity state off owning region's thread"); // Folia - region threading
         return (net.minecraft.world.entity.animal.chicken.Chicken) this.entity;
     }
 

@@ -13,6 +13,7 @@ public class CraftEvoker extends CraftSpellcaster implements Evoker {
 
     @Override
     public net.minecraft.world.entity.monster.illager.Evoker getHandle() {
+        ca.spottedleaf.moonrise.common.util.TickThread.ensureTickThread(this.entity, "Accessing entity state off owning region's thread"); // Folia - region threading
         return (net.minecraft.world.entity.monster.illager.Evoker) this.entity;
     }
 

@@ -37,21 +37,28 @@ public final class CraftMapView implements MapView {
 
     @Override
     public boolean isVirtual() {
+        synchronized (this.worldMap) { // Folia - region threading
         return !this.renderers.isEmpty() && !(this.renderers.get(0) instanceof CraftMapRenderer);
+        } // Folia - region threading
     }
 
     @Override
     public Scale getScale() {
+        synchronized (this.worldMap) { // Folia - region threading
         return Scale.valueOf(this.worldMap.scale);
+        } // Folia - region threading
     }
 
     @Override
     public void setScale(Scale scale) {
+        synchronized (this.worldMap) { // Folia - region threading
         this.worldMap.scale = scale.getValue();
+        } // Folia - region threading
     }
 
     @Override
     public World getWorld() {
+        synchronized (this.worldMap) { // Folia - region threading
         ResourceKey<net.minecraft.world.level.Level> dimension = this.worldMap.dimension;
         ServerLevel world = MinecraftServer.getServer().getLevel(dimension);
 
@@ -63,50 +70,66 @@ public final class CraftMapView implements MapView {
             return Bukkit.getServer().getWorld(this.worldMap.uniqueId);
         }
         return null;
+        } // Folia - region threading
     }
 
     @Override
     public void setWorld(World world) {
+        synchronized (this.worldMap) { // Folia - region threading
         this.worldMap.dimension = ((CraftWorld) world).getHandle().dimension();
         this.worldMap.uniqueId = world.getUID();
+        } // Folia - region threading
     }
 
     @Override
     public int getCenterX() {
+        synchronized (this.worldMap) { // Folia - region threading
         return this.worldMap.centerX;
+        } // Folia - region threading
     }
 
     @Override
     public int getCenterZ() {
+        synchronized (this.worldMap) { // Folia - region threading
         return this.worldMap.centerZ;
+        } // Folia - region threading
     }
 
     @Override
     public void setCenterX(int x) {
+        synchronized (this.worldMap) { // Folia - region threading
         this.worldMap.centerX = x;
+        } // Folia - region threading
     }
 
     @Override
     public void setCenterZ(int z) {
+        synchronized (this.worldMap) { // Folia - region threading
         this.worldMap.centerZ = z;
+        } // Folia - region threading
     }
 
     @Override
     public List<MapRenderer> getRenderers() {
+        synchronized (this.worldMap) { // Folia - region threading
         return new ArrayList<MapRenderer>(this.renderers);
+        } // Folia - region threading
     }
 
     @Override
     public void addRenderer(MapRenderer renderer) {
+        synchronized (this.worldMap) { // Folia - region threading
         if (!this.renderers.contains(renderer)) {
             this.renderers.add(renderer);
             this.canvases.put(renderer, new WeakHashMap<>());
             renderer.initialize(this);
         }
+        } // Folia - region threading
     }
 
     @Override
     public boolean removeRenderer(MapRenderer renderer) {
+        synchronized (this.worldMap) { // Folia - region threading
         if (this.renderers.contains(renderer)) {
             this.renderers.remove(renderer);
             for (Map.Entry<CraftPlayer, CraftMapCanvas> entry : this.canvases.get(renderer).entrySet()) {
@@ -121,6 +144,7 @@ public final class CraftMapView implements MapView {
         } else {
             return false;
         }
+        } // Folia - region threading
     }
 
     private boolean isContextual() {
@@ -131,6 +155,7 @@ public final class CraftMapView implements MapView {
     }
 
     public RenderData render(CraftPlayer player) {
+        synchronized (this.worldMap) { // Folia - region threading
         boolean context = this.isContextual();
         RenderData render = this.renderCache.get(context ? player : null);
 
@@ -173,35 +198,48 @@ public final class CraftMapView implements MapView {
         }
 
         return render;
+        } // Folia - region threading
     }
 
     @Override
     public boolean isTrackingPosition() {
+        synchronized (this.worldMap) { // Folia - region threading
         return this.worldMap.trackingPosition;
+        } // Folia - region threading
     }
 
     @Override
     public void setTrackingPosition(boolean trackingPosition) {
+        synchronized (this.worldMap) { // Folia - region threading
         this.worldMap.trackingPosition = trackingPosition;
+        } // Folia - region threading
     }
 
     @Override
     public boolean isUnlimitedTracking() {
+        synchronized (this.worldMap) { // Folia - region threading
         return this.worldMap.unlimitedTracking;
+        } // Folia - region threading
     }
 
     @Override
     public void setUnlimitedTracking(boolean unlimited) {
+        synchronized (this.worldMap) { // Folia - region threading
         this.worldMap.unlimitedTracking = unlimited;
+        } // Folia - region threading
     }
 
     @Override
     public boolean isLocked() {
+        synchronized (this.worldMap) { // Folia - region threading
         return this.worldMap.locked;
+        } // Folia - region threading
     }
 
     @Override
     public void setLocked(boolean locked) {
+        synchronized (this.worldMap) { // Folia - region threading
         this.worldMap.locked = locked;
+        } // Folia - region threading
     }
 }

@@ -12,6 +12,7 @@ public class CraftSkeletonHorse extends CraftAbstractHorse implements SkeletonHo
 
     @Override
     public net.minecraft.world.entity.animal.equine.SkeletonHorse getHandle() {
+        ca.spottedleaf.moonrise.common.util.TickThread.ensureTickThread(this.entity, "Accessing entity state off owning region's thread"); // Folia - region threading
         return (net.minecraft.world.entity.animal.equine.SkeletonHorse) this.entity;
     }
 

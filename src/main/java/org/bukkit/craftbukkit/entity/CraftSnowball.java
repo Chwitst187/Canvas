@@ -11,6 +11,7 @@ public class CraftSnowball extends CraftThrowableProjectile implements Snowball 
 
     @Override
     public net.minecraft.world.entity.projectile.throwableitemprojectile.Snowball getHandle() {
+        ca.spottedleaf.moonrise.common.util.TickThread.ensureTickThread(this.entity, "Accessing entity state off owning region's thread"); // Folia - region threading
         return (net.minecraft.world.entity.projectile.throwableitemprojectile.Snowball) this.entity;
     }
 }

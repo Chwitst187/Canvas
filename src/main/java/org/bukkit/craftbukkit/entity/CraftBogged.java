@@ -12,6 +12,7 @@ public class CraftBogged extends CraftAbstractSkeleton implements Bogged, io.pap
 
     @Override
     public net.minecraft.world.entity.monster.skeleton.Bogged getHandle() {
+        ca.spottedleaf.moonrise.common.util.TickThread.ensureTickThread(this.entity, "Accessing entity state off owning region's thread"); // Folia - region threading
         return (net.minecraft.world.entity.monster.skeleton.Bogged) this.entity;
     }
 
