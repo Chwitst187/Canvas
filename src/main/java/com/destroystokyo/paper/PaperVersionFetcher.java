@@ -40,8 +40,8 @@ public class PaperVersionFetcher implements VersionFetcher {
     private static final ComponentLogger COMPONENT_LOGGER = ComponentLogger.logger(LogManager.getRootLogger().getName());
     private static final int DISTANCE_ERROR = -1;
     private static final int DISTANCE_UNKNOWN = -2;
-    private static final String DOWNLOAD_PAGE = "https://papermc.io/downloads/paper";
-    private static final String REPOSITORY = "PaperMC/Paper";
+    private static final String DOWNLOAD_PAGE = "https://papermc.io/downloads/folia"; // Folia
+    private static final String REPOSITORY = "PaperMC/Folia"; // Folia
     private static final ServerBuildInfo BUILD_INFO = ServerBuildInfo.buildInfo();
     private static final String USER_AGENT = BUILD_INFO.brandName() + "/" + BUILD_INFO.asString(VERSION_SIMPLE) + " (https://papermc.io)";
     private static final Gson GSON = new Gson();
@@ -139,7 +139,7 @@ public class PaperVersionFetcher implements VersionFetcher {
         final String currentVersion = PaperVersionFetcher.BUILD_INFO.minecraftVersionId();
 
         try {
-            final URL versionsUrl = URI.create("https://fill.papermc.io/v3/projects/paper").toURL();
+            final URL versionsUrl = URI.create("https://fill.papermc.io/v3/projects/folia").toURL(); // Folia
             final HttpURLConnection connection = (HttpURLConnection) versionsUrl.openConnection();
             connection.setConnectTimeout(5000);
             connection.setReadTimeout(5000);
@@ -161,7 +161,7 @@ public class PaperVersionFetcher implements VersionFetcher {
                     }
 
                     try {
-                        final URL buildsUrl = URI.create("https://fill.papermc.io/v3/projects/paper/versions/" + latestVersion + "/builds/latest").toURL();
+                        final URL buildsUrl = URI.create("https://fill.papermc.io/v3/projects/folia/versions/" + latestVersion + "/builds/latest").toURL(); // Folia
                         final HttpURLConnection connection2 = (HttpURLConnection) buildsUrl.openConnection();
                         connection2.setConnectTimeout(5000);
                         connection2.setReadTimeout(5000);
@@ -194,7 +194,7 @@ public class PaperVersionFetcher implements VersionFetcher {
 
     private static int fetchDistanceFromSiteApi(final int jenkinsBuild) {
         try {
-            final URL buildsUrl = URI.create("https://fill.papermc.io/v3/projects/paper/versions/" + PaperVersionFetcher.BUILD_INFO.minecraftVersionId() + "/builds").toURL();
+            final URL buildsUrl = URI.create("https://fill.papermc.io/v3/projects/folia/versions/" + PaperVersionFetcher.BUILD_INFO.minecraftVersionId() + "/builds").toURL(); // Folia
             final HttpURLConnection connection = (HttpURLConnection) buildsUrl.openConnection();
             connection.setConnectTimeout(5000);
             connection.setReadTimeout(5000);
