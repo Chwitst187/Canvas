@@ -25,7 +25,7 @@ public final class PaperCommands {
         COMMANDS.put("paper", new PaperCommand("paper"));
         COMMANDS.put("mspt", new MSPTCommand("mspt"));
         COMMANDS.put("tps", new io.papermc.paper.threadedregions.commands.CommandServerHealth()); // Folia - region threading
-        COMMANDS.put("profiler", new io.papermc.paper.threadedregions.commands.CommandProfiler()); // Folia - region threading - profiler
+//        COMMANDS.put("profiler", new io.papermc.paper.threadedregions.commands.CommandProfiler()); // Folia - region threading - profiler
 
         COMMANDS.forEach((s, command) -> {
             server.server.getCommandMap().register(s, "Paper", command);
