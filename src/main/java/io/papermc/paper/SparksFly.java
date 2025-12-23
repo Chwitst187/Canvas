@@ -42,7 +42,7 @@ public final class SparksFly {
         // Folia - region threading
         this.logger = Logger.getLogger(ID);
         this.logger.log(Level.INFO, "This server bundles the spark profiler. For more information please visit https://docs.papermc.io/paper/profiling");
-        this.spark = PaperSparkModule.create(Compatibility.VERSION_1_0, server, this.logger, new PaperScheduler() {
+        this.spark = io.canvasmc.canvas.spark.FoliaSparkPlugin.create(Compatibility.VERSION_1_0, server, this.logger, new PaperScheduler() { // Canvas - support spark
             @Override
             public void executeAsync(final Runnable runnable) {
                 MCUtil.scheduleAsyncTask(this.catching(runnable, "asynchronous"));
@@ -116,7 +116,7 @@ public final class SparksFly {
 
     private void enable() {
         if (!this.enabled) {
-            if (false) { // Folia - disable in-built spark profiler
+            if (GlobalConfiguration.get().spark.enabled) { // Folia - disable in-built spark profiler // Canvas - support spark
                 this.enabled = true;
                 this.spark.enable();
             } else {
@@ -168,7 +168,7 @@ public final class SparksFly {
     }
 
     public static boolean isPluginPreferred() {
-        return true; // Folia - disable in-built spark profiler
+        return Boolean.getBoolean(PREFER_SPARK_PLUGIN_PROPERTY); // Folia - disable in-built spark profiler // Canvas - support spark
     }
 
     private static boolean isPluginEnabled(final Server server) {
@@ -176,7 +176,7 @@ public final class SparksFly {
     }
 
     private static boolean shouldEnableImmediately() {
-        return GlobalConfiguration.get().spark.enableImmediately;
+        return false; // Canvas - support spark
     }
 
     public static final class CommandImpl extends Command {
