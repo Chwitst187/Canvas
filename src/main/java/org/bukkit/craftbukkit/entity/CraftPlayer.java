@@ -234,7 +234,7 @@ public class CraftPlayer extends CraftHumanEntity implements Player, PluginMessa
     private long lastPlayed = 0;
     private boolean hasPlayedBefore = false;
     private final ConversationTracker conversationTracker = new ConversationTracker();
-    private final Map<UUID, Set<WeakReference<Plugin>>> invertedVisibilityEntities = new HashMap<>();
+    private final Map<UUID, it.unimi.dsi.fastutil.objects.ObjectOpenHashSet<WeakReference<Plugin>>> invertedVisibilityEntities = new java.util.concurrent.ConcurrentHashMap<>(); // Canvas - fix folia visibility api
     private final Set<UUID> unlistedEntities = new HashSet<>(); // Paper - Add Listing API for Player
     private static final WeakHashMap<Plugin, WeakReference<Plugin>> pluginWeakReferences = new WeakHashMap<>();
     private int hash = 0;
@@ -1886,16 +1886,30 @@ public class CraftPlayer extends CraftHumanEntity implements Player, PluginMessa
     }
 
     private boolean addInvertedVisibility(@Nullable Plugin plugin, org.bukkit.entity.Entity entity) {
-        Set<WeakReference<Plugin>> invertedPlugins = this.invertedVisibilityEntities.get(entity.getUniqueId());
-        if (invertedPlugins != null) {
-            // Some plugins are already inverting the entity. Just mark that this
-            // plugin wants the entity inverted too and end.
-            invertedPlugins.add(CraftPlayer.getPluginWeakReference(plugin));
+        // Canvas start - fix folia visibility api
+        final UUID uuid = entity.getUniqueId();
+
+        it.unimi.dsi.fastutil.objects.ObjectOpenHashSet<WeakReference<Plugin>> set =
+            invertedVisibilityEntities.get(uuid);
+
+        if (set != null) {
+            set.add(CraftPlayer.getPluginWeakReference(plugin));
             return false;
         }
-        invertedPlugins = new HashSet<>();
-        invertedPlugins.add(CraftPlayer.getPluginWeakReference(plugin));
-        this.invertedVisibilityEntities.put(entity.getUniqueId(), invertedPlugins);
+
+        it.unimi.dsi.fastutil.objects.ObjectOpenHashSet<WeakReference<Plugin>> newSet =
+            new it.unimi.dsi.fastutil.objects.ObjectOpenHashSet<>();
+
+        newSet.add(CraftPlayer.getPluginWeakReference(plugin));
+
+        it.unimi.dsi.fastutil.objects.ObjectOpenHashSet<WeakReference<Plugin>> existing =
+            invertedVisibilityEntities.putIfAbsent(uuid, newSet);
+
+        if (existing != null) {
+            existing.add(CraftPlayer.getPluginWeakReference(plugin));
+            return false;
+        }
+        // Canvas end - fix folia visibility api
 
         return true;
     }
@@ -1968,16 +1982,24 @@ public class CraftPlayer extends CraftHumanEntity implements Player, PluginMessa
     }
 
     private boolean removeInvertedVisibility(@Nullable Plugin plugin, org.bukkit.entity.Entity entity) {
-        Set<WeakReference<Plugin>> invertedPlugins = this.invertedVisibilityEntities.get(entity.getUniqueId());
-        if (invertedPlugins == null) {
-            return false; // Entity isn't inverted
-        }
-        invertedPlugins.remove(CraftPlayer.getPluginWeakReference(plugin));
-        if (!invertedPlugins.isEmpty()) {
-            return false; // Some other plugins still want the entity inverted
-        }
-        this.invertedVisibilityEntities.remove(entity.getUniqueId());
+        // Canvas start - fix folia visibility api
+        final UUID uuid = entity.getUniqueId();
 
+        it.unimi.dsi.fastutil.objects.ObjectOpenHashSet<WeakReference<Plugin>> set =
+            invertedVisibilityEntities.get(uuid);
+
+        if (set == null) {
+            return false;
+        }
+
+        set.remove(CraftPlayer.getPluginWeakReference(plugin));
+
+        if (!set.isEmpty()) {
+            return false;
+        }
+
+        invertedVisibilityEntities.remove(uuid, set);
+        // Canvas end - fix folia visibility api
         return true;
     }
 
