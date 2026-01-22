@@ -593,7 +593,7 @@ public class Metrics {
             boolean logFailedRequests = config.getBoolean("logFailedRequests", false);
             // Only start Metrics, if it's enabled in the config
             if (config.getBoolean("enabled", true)) {
-                Metrics metrics = new Metrics("Folia", serverUUID, logFailedRequests, Bukkit.getLogger()); // Folia - we have our own bstats page
+                Metrics metrics = new Metrics("Canvas", serverUUID, logFailedRequests, Bukkit.getLogger()); // Folia - we have our own bstats page // Canvas - Rebrand
 
                 metrics.addCustomChart(new Metrics.SimplePie("minecraft_version", () -> {
                     String minecraftVersion = Bukkit.getVersion();
@@ -607,11 +607,17 @@ public class Metrics {
                 final String implVersion = org.bukkit.craftbukkit.Main.class.getPackage().getImplementationVersion();
                 if (implVersion != null) {
                     final String buildOrHash = implVersion.substring(implVersion.lastIndexOf('-') + 1);
-                    paperVersion = "git-Folia-%s-%s".formatted(Bukkit.getServer().getMinecraftVersion(), buildOrHash); // Folia - we have our own bstats page
+                    // Canvas start - new versioning schem for bstats
+                    io.papermc.paper.ServerBuildInfo buildInfo = io.papermc.paper.ServerBuildInfo.buildInfo();
+                    final int num = buildInfo.buildNumber().getAsInt();
+                    paperVersion = "Canvas-V3-" +
+                        buildInfo.minecraftVersionName() + "-" +
+                        (num != -1 ? num : "DEV");
+                    // Canvas end - new versioning schem for bstats
                 } else {
                     paperVersion = "unknown";
                 }
-                metrics.addCustomChart(new Metrics.SimplePie("folia_version", () -> paperVersion)); // Folia - we have our own bstats page
+                metrics.addCustomChart(new Metrics.SimplePie("canvas_version", () -> paperVersion)); // Folia - we have our own bstats page // Canvas - Rebrand
 
                 metrics.addCustomChart(new Metrics.DrilldownPie("java_version", () -> {
                     Map<String, Map<String, Integer>> map = new HashMap<>();

@@ -491,7 +491,7 @@ public final class CraftMagicNumbers implements UnsafeValues {
 
     @Override
     public com.destroystokyo.paper.util.VersionFetcher getVersionFetcher() {
-        return new com.destroystokyo.paper.PaperVersionFetcher();
+        return new io.canvasmc.canvas.util.version.CanvasVersionFetcher(); // Canvas - Rebrand
     }
 
     @Override

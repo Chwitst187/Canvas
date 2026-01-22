@@ -31,6 +31,7 @@ public record ServerBuildInfoImpl(
     private static final String ATTRIBUTE_GIT_COMMIT = "Git-Commit";
 
     private static final String BRAND_PAPER_NAME = "Paper";
+    private static final String BRAND_CANVAS_NAME = "Canvas"; // Canvas - Rebrand
 
     private static final String BUILD_DEV = "DEV";
 
@@ -42,9 +43,9 @@ public record ServerBuildInfoImpl(
         this(
             getManifestAttribute(manifest, ATTRIBUTE_BRAND_ID)
                 .map(Key::key)
-                .orElse(Key.key("papermc", "folia")), // Folia
+                .orElse(BRAND_CANVAS_ID), // Folia // Canvas - Rebrand
             getManifestAttribute(manifest, ATTRIBUTE_BRAND_NAME)
-                .orElse("Folia"), // Folia
+                .orElse(BRAND_CANVAS_NAME), // Folia // Canvas - Rebrand
             SharedConstants.getCurrentVersion().id(),
             SharedConstants.getCurrentVersion().name(),
             getManifestAttribute(manifest, ATTRIBUTE_BUILD_NUMBER)
@@ -61,7 +62,7 @@ public record ServerBuildInfoImpl(
 
     @Override
     public boolean isBrandCompatible(final @NotNull Key brandId) {
-        return brandId.equals(this.brandId);
+        return brandId.equals(this.brandId) || brandId.equals(BRAND_PAPER_ID) || brandId.equals(BRAND_FOLIA_ID); // Canvas - Rebrand
     }
 
     @Override
