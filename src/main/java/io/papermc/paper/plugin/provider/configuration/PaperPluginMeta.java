@@ -65,6 +65,7 @@ public class PaperPluginMeta implements PluginMeta {
     @Required
     private ApiVersion apiVersion;
     private boolean foliaSupported = false; // Folia
+    private boolean canvasSupported = false; // Canvas - canvas supported flag
 
     private Map<PluginDependencyLifeCycle, Map<String, DependencyConfiguration>> dependencies = new EnumMap<>(PluginDependencyLifeCycle.class);
 
@@ -255,7 +256,7 @@ public class PaperPluginMeta implements PluginMeta {
     // Folia start
     @Override
     public boolean isFoliaSupported() {
-        return this.foliaSupported;
+        return this.foliaSupported || this.canvasSupported; // Canvas - canvas supported flag
     }
     // Folia end
 
