@@ -259,6 +259,7 @@ public class CraftPlayer extends CraftHumanEntity implements Player, PluginMessa
         this.lastRegion = region;
         if (region != null && this.packetProcessor.hasPackets()) {
             region.regionData.setHasPackets();
+            region.regionData.getRegionSchedulingHandle().getTickManager().sendStateToPlayer(getHandle()); // Canvas - region threading
         }
     }
 
