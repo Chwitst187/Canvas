@@ -264,6 +264,13 @@ public class CraftPlayer extends CraftHumanEntity implements Player, PluginMessa
     }
 
     public <T extends net.minecraft.network.PacketListener> void schedulePacket(T listener, net.minecraft.network.protocol.Packet<T> packet) {
+        // Canvas start - region threading
+        if (this.getHandle().canvas$isDisplayingEndCredits) {
+            // if displaying end credits, we want to run this on the global tick
+            io.papermc.paper.threadedregions.RegionizedServer.getInstance().schedulePacket(listener, packet);
+            return;
+        }
+        // Canvas end - region threading
         if (!this.packetProcessor.scheduleIfPossible(listener, packet)) {
             return;
         }
