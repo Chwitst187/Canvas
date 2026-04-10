@@ -277,7 +277,7 @@ public final class CraftServer implements Server {
     private final StructureManager structureManager;
     final DedicatedServer console;
     private final DedicatedPlayerList playerList;
-    private final Map<String, World> worlds = new LinkedHashMap<>();
+    public final Map<String, World> worlds = new LinkedHashMap<>();
     private YamlConfiguration configuration;
     private YamlConfiguration commandsConfiguration;
     private final Yaml yaml = new Yaml(new SafeConstructor(new LoaderOptions()));
