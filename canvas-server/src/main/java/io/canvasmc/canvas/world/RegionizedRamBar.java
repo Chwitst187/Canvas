@@ -8,6 +8,9 @@ import io.papermc.paper.adventure.PaperAdventure;
 import io.papermc.paper.threadedregions.RegionizedWorldData;
 import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryUsage;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
@@ -25,6 +28,7 @@ public class RegionizedRamBar {
     private static final String GRADIENT_MEDIUM = "<gradient:#ffff55:#ffaa00><text></gradient>";
     private static final String GRADIENT_LOW = "<gradient:#ff5555:#aa0000><text></gradient>";
     public static final String DEFAULT_FORMAT = "<gray>Mem: <used>/<xmx> (<percent>)";
+    private static final Map<UUID, DisplayBinding> DISPLAY_MANAGERS = new ConcurrentHashMap<>();
 
     private final RegionizedWorldData worldData;
     private final boolean canTick;
@@ -67,7 +71,22 @@ public class RegionizedRamBar {
     }
 
     public static @NonNull DisplayManager getDisplayManager(final @NonNull ServerPlayer player) {
-        return player.canvas$ramBarDisplay;
+        return DISPLAY_MANAGERS.compute(player.getUUID(), (ignored, existing) -> {
+            if (existing != null && existing.isFor(player)) {
+                return existing;
+            }
+            return new DisplayBinding(player);
+        }).manager();
+    }
+
+    private record DisplayBinding(ServerPlayer player, DisplayManager manager) {
+        private DisplayBinding(final ServerPlayer player) {
+            this(player, DisplayManager.createNew(player));
+        }
+
+        private boolean isFor(final ServerPlayer candidate) {
+            return this.player == candidate;
+        }
     }
 
     public static void renderNow(final @NonNull ServerPlayer player) {
