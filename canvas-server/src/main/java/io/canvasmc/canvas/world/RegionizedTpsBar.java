@@ -37,8 +37,6 @@ public class RegionizedTpsBar {
     private static final String GRADIENT_GOOD = "<gradient:#55ff55:#00aa00><text></gradient>";
     private static final String GRADIENT_MEDIUM = "<gradient:#ffff55:#ffaa00><text></gradient>";
     private static final String GRADIENT_LOW = "<gradient:#ff5555:#aa0000><text></gradient>";
-    private static final ThreadLocal<DecimalFormat> TPS_FORMAT = ThreadLocal.withInitial(() -> new DecimalFormat("0.00"));
-    private static final ThreadLocal<DecimalFormat> MSPT_FORMAT = ThreadLocal.withInitial(() -> new DecimalFormat("0.00"));
     private static final ThreadLocal<DecimalFormat> UTIL_FORMAT = ThreadLocal.withInitial(() -> new DecimalFormat("0.#"));
     private static final ThreadLocal<DecimalFormat> INT_FORMAT = ThreadLocal.withInitial(() -> new DecimalFormat("0"));
     public static final String DEFAULT_FORMAT =
@@ -97,7 +95,7 @@ public class RegionizedTpsBar {
     }
 
     private Component gradient(String tpl, String value) {
-        String inner = value.replace(",", "<gray>,</gray>").replace(".", "<gray>.</gray>");
+        String inner = value.replace(",", "<gray>,</gray>");
         String miniMessage = tpl.replace("<text>", inner);
         return MINI_MESSAGE.deserialize(miniMessage);
     }
@@ -131,8 +129,11 @@ public class RegionizedTpsBar {
             cachedFormat.set(entry);
         }
 
-        final Component tpsComponent = sprinting ? Component.text(TPS_FORMAT.get().format(tps), SPRINTING_COLOR) : gradientForTps(tps, tps <= 0.0 ? "—" : TPS_FORMAT.get().format(tps));
-        final Component msptComponent = sprinting ? Component.text(MSPT_FORMAT.get().format(mspt), SPRINTING_COLOR) : gradientForMspt(mspt, mspt <= 0.0 ? "—" : MSPT_FORMAT.get().format(mspt));
+        String tpsStr = tps <= 0.0 ? "—" : String.format("%.2f", tps);
+        String msptStr = mspt <= 0.0 ? "—" : String.format("%.2f", mspt);
+
+        final Component tpsComponent = sprinting ? Component.text(tpsStr, SPRINTING_COLOR) : gradientForTps(tps, tpsStr);
+        final Component msptComponent = sprinting ? Component.text(msptStr, SPRINTING_COLOR) : gradientForMspt(mspt, msptStr);
         final Component utilComponent = (sprinting ? Component.text(UTIL_FORMAT.get().format(utilPercent), SPRINTING_COLOR) : gradientForUtil(utilPercent, UTIL_FORMAT.get().format(utilPercent))).append(Component.text("%").color(sprinting ? SPRINTING_COLOR : TextColor.color(0xAAAAAA)));
         final Component playersComponent = Component.text(INT_FORMAT.get().format(players), sprinting ? SPRINTING_COLOR : CommandUtil.getColourForTPS(TickRegionScheduler.getTickRate()));
 
