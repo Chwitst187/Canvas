@@ -37,16 +37,16 @@ public class RegionizedTpsBar {
     private static final String GRADIENT_GOOD = "<gradient:#55ff55:#00aa00><text></gradient>";
     private static final String GRADIENT_MEDIUM = "<gradient:#ffff55:#ffaa00><text></gradient>";
     private static final String GRADIENT_LOW = "<gradient:#ff5555:#aa0000><text></gradient>";
-    private static final ThreadLocal<DecimalFormat> TPS_FORMAT = ThreadLocal.withInitial(() -> new DecimalFormat("0.##"));
-    private static final ThreadLocal<DecimalFormat> MSPT_FORMAT = ThreadLocal.withInitial(() -> new DecimalFormat("0.##"));
+    private static final ThreadLocal<DecimalFormat> TPS_FORMAT = ThreadLocal.withInitial(() -> new DecimalFormat("0.00"));
+    private static final ThreadLocal<DecimalFormat> MSPT_FORMAT = ThreadLocal.withInitial(() -> new DecimalFormat("0.00"));
     private static final ThreadLocal<DecimalFormat> UTIL_FORMAT = ThreadLocal.withInitial(() -> new DecimalFormat("0.#"));
     private static final ThreadLocal<DecimalFormat> INT_FORMAT = ThreadLocal.withInitial(() -> new DecimalFormat("0"));
     public static final String DEFAULT_FORMAT =
-        "<gray>TPS: <tps> MSPT: <mspt> Ping: <ping> Util: <util> Players: <players>";
+        "<gray>TPS: <tps> MSPT: <mspt> Ping: <ping> ChunkHot: <chunkhot>";
     private static final AtomicReference<FormatEntry> cachedFormat = new AtomicReference<>(null);
     private final RegionizedWorldData worldData;
     private final boolean canTick;
-    private long nextTick = System.nanoTime();
+    private int ticksSinceLastUpdate = 0;
 
     public RegionizedTpsBar(RegionizedWorldData worldData) {
         this.worldData = worldData;
@@ -72,9 +72,12 @@ public class RegionizedTpsBar {
     }
 
     public void tick() {
-        if (this.canTick && this.nextTick <= System.nanoTime()) { // use system nano time, more reliable with runtime tick rate changes
+        if (!this.canTick) return;
+
+        this.ticksSinceLastUpdate++;
+        if (this.ticksSinceLastUpdate >= 20) {
+            this.ticksSinceLastUpdate = 0;
             // update tps maps
-            long startTime = System.nanoTime();
             TickData.TickReportData tickReportData = this.worldData.regionData.getRegionSchedulingHandle().getTickReport5s(System.nanoTime());
             TickData.SegmentedAverage tpsAverage = tickReportData.tpsData();
             TickData.SegmentedAverage msptAverage = tickReportData.timePerTickData();
@@ -90,12 +93,11 @@ public class RegionizedTpsBar {
                 localPlayer.canvas$tpsBarDisplay.updateBarColorAndProgress(mspt);
                 localPlayer.canvas$tpsBarDisplay.tick();
             }
-            this.nextTick = startTime + 1_000_000_000;
         }
     }
 
     private Component gradient(String tpl, String value) {
-        String inner = value.replace(",", "<gray>,</gray>");
+        String inner = value.replace(",", "<gray>,</gray>").replace(".", "<gray>.</gray>");
         String miniMessage = tpl.replace("<text>", inner);
         return MINI_MESSAGE.deserialize(miniMessage);
     }
@@ -171,8 +173,8 @@ public class RegionizedTpsBar {
                     BossBar.bossBar(
                         this.display,
                         0.0F,
-                        BossBar.Color.BLUE,
-                        BossBar.Overlay.PROGRESS
+                        BossBar.Color.PURPLE,
+                        BossBar.Overlay.NOTCHED_20
                     );
 
                 private volatile boolean enabled = false;
