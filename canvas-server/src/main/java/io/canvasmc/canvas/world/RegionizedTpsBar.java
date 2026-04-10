@@ -7,12 +7,10 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import io.canvasmc.canvas.Config;
 import io.papermc.paper.adventure.PaperAdventure;
 import io.papermc.paper.threadedregions.RegionizedWorldData;
-import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
@@ -24,6 +22,7 @@ import net.minecraft.network.protocol.game.ClientboundSetActionBarTextPacket;
 import net.minecraft.server.level.ServerPlayer;
 import org.bukkit.craftbukkit.entity.CraftPlayer;
 import org.jetbrains.annotations.Contract;
+import org.jetbrains.annotations.NotNull;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
@@ -34,11 +33,10 @@ public class RegionizedTpsBar {
     private static final String GRADIENT_GOOD = "<gradient:#55ff55:#00aa00><text></gradient>";
     private static final String GRADIENT_MEDIUM = "<gradient:#ffff55:#ffaa00><text></gradient>";
     private static final String GRADIENT_LOW = "<gradient:#ff5555:#aa0000><text></gradient>";
-    private static final ThreadLocal<DecimalFormat> UTIL_FORMAT = ThreadLocal.withInitial(() -> new DecimalFormat("0.#"));
-    private static final ThreadLocal<DecimalFormat> INT_FORMAT = ThreadLocal.withInitial(() -> new DecimalFormat("0"));
+    private static final int TPS_PRECISION = 2;
+    private static final int MSPT_PRECISION = 2;
     public static final String DEFAULT_FORMAT =
         "<gray>TPS: <tps> MSPT: <mspt> Ping: <ping> ChunkHot: <chunkhot>";
-    private static final AtomicReference<FormatEntry> cachedFormat = new AtomicReference<>(null);
     private final RegionizedWorldData worldData;
     private final boolean canTick;
     private int ticksSinceLastUpdate = 0;
@@ -78,13 +76,11 @@ public class RegionizedTpsBar {
             TickData.SegmentedAverage msptAverage = tickReportData.timePerTickData();
             final double tps = tpsAverage.segmentAll().average();
             final double mspt = msptAverage.segmentAll().average() / 1.0E6;
-            final double util = tickReportData.utilisation() * 100;
-            final int players = this.worldData.getPlayerCount();
             // update players
             for (final ServerPlayer localPlayer : this.worldData.getLocalPlayers()) {
-                final Component textComponent = buildComponent(tps, mspt, util, players, localPlayer);
+                final Component textComponent = buildComponent(tps, mspt, localPlayer);
                 localPlayer.canvas$tpsBarDisplay.setDisplay(textComponent);
-                localPlayer.canvas$tpsBarDisplay.updateBarColorAndProgress(util);
+                localPlayer.canvas$tpsBarDisplay.updateBarColorAndProgress(mspt);
                 localPlayer.canvas$tpsBarDisplay.tick();
             }
         }
@@ -111,50 +107,43 @@ public class RegionizedTpsBar {
         return gradient(tpl, value);
     }
 
-    private Component gradientForUtil(double util, String value) {
-        String tpl = util <= 70 ? GRADIENT_GOOD : (util <= 90 ? GRADIENT_MEDIUM : GRADIENT_LOW);
+    private Component gradientForChunkHot(long chunkHot, String value) {
+        String tpl = chunkHot < 500 ? GRADIENT_GOOD : (chunkHot < 750 ? GRADIENT_MEDIUM : GRADIENT_LOW);
         return gradient(tpl, value);
     }
 
-    private @NonNull Component buildComponent(final double tps, final double mspt, final double utilPercent, final int players, final ServerPlayer localPlayer) {
-        final String effectiveRaw = Config.INSTANCE.tpsBarFormat;
-        FormatEntry entry = cachedFormat.get();
-        if (entry == null || !effectiveRaw.equals(entry.raw())) {
-            entry = FormatEntry.compile(effectiveRaw);
-            cachedFormat.set(entry);
+    private @NonNull Component buildComponent(final double tps, final double mspt, final ServerPlayer localPlayer) {
+        final int pingVal = localPlayer != null ? localPlayer.connection.latency() : 0;
+        final long chunkHot = 0L; // Region bar currently has no per-player/global chunk-hot metric available.
+        return MINI_MESSAGE.deserialize(
+            DEFAULT_FORMAT,
+            net.kyori.adventure.text.minimessage.tag.resolver.Placeholder.component("tps", getTpsComponent(tps)),
+            net.kyori.adventure.text.minimessage.tag.resolver.Placeholder.component("mspt", getMsptComponent(mspt)),
+            net.kyori.adventure.text.minimessage.tag.resolver.Placeholder.component("ping", getPingComponent(pingVal)),
+            net.kyori.adventure.text.minimessage.tag.resolver.Placeholder.component("chunkhot", getChunkHotComponent(chunkHot))
+        );
+    }
+
+    private @NotNull Component getTpsComponent(double tps) {
+        return gradientForTps(tps, tps <= 0.0 ? "—" : String.format("%." + TPS_PRECISION + "f", tps));
+    }
+
+    private @NotNull Component getMsptComponent(double mspt) {
+        return gradientForMspt(mspt, mspt <= 0.0 ? "—" : String.format("%." + MSPT_PRECISION + "f", mspt));
+    }
+
+    private @NotNull Component getPingComponent(int ping) {
+        if (ping <= 0) {
+            return MINI_MESSAGE.deserialize("<gray>—");
         }
+        return gradientForPing(ping, String.valueOf(ping)).append(MINI_MESSAGE.deserialize("<gray>ms"));
+    }
 
-        String tpsStr = tps <= 0.0 ? "—" : String.format("%.2f", tps);
-        String msptStr = mspt <= 0.0 ? "—" : String.format("%.2f", mspt);
-
-        final Component tpsComponent = gradientForTps(tps, tpsStr);
-        final Component msptComponent = gradientForMspt(mspt, msptStr);
-        final Component utilComponent = gradientForUtil(utilPercent, UTIL_FORMAT.get().format(utilPercent))
-            .append(Component.text("%").color(TextColor.color(0xAAAAAA)));
-        final Component playersComponent = gradientForUtil(utilPercent, INT_FORMAT.get().format(players));
-
-        int pingVal = localPlayer != null ? localPlayer.connection.latency() : 0;
-        final Component pingComponent = pingVal <= 0 ? MINI_MESSAGE.deserialize("<gray>—") : gradientForPing(pingVal, String.valueOf(pingVal)).append(MINI_MESSAGE.deserialize("<gray>ms"));
-        final Component chunkhotComponent = gradientForUtil(utilPercent, UTIL_FORMAT.get().format(utilPercent))
-            .append(Component.text("%").color(TextColor.color(0xAAAAAA)));
-
-        final TextComponent.Builder builder = Component.text();
-        for (final FormatEntry.Segment segment : entry.segments()) {
-            if (segment instanceof FormatEntry.Segment.Static(Component component)) {
-                builder.append(component);
-            } else if (segment instanceof FormatEntry.Segment.Dynamic(String key)) {
-                builder.append(switch (key) {
-                    case "tps" -> tpsComponent;
-                    case "mspt" -> msptComponent;
-                    case "util" -> utilComponent;
-                    case "players" -> playersComponent;
-                    case "ping" -> pingComponent;
-                    case "chunkhot" -> chunkhotComponent;
-                    default -> Component.empty();
-                });
-            }
+    private @NotNull Component getChunkHotComponent(long chunkHot) {
+        if (chunkHot <= 0L) {
+            return MINI_MESSAGE.deserialize("<gray>—");
         }
-        return builder.build();
+        return gradientForChunkHot(chunkHot, String.valueOf(chunkHot));
     }
 
     public enum Placement {
@@ -220,11 +209,11 @@ public class RegionizedTpsBar {
                 }
 
                 @Override
-                public void updateBarColorAndProgress(final double utilPercent) {
-                    final double ratio = Math.min(1.0D, Math.max(0.0D, utilPercent / 100.0D));
-                    final BossBar.Color bossBarColor = ratio <= 0.70D
+                public void updateBarColorAndProgress(final double mspt) {
+                    final double ratio = Math.min(1.0D, Math.max(0.0D, mspt / 50.0D));
+                    final BossBar.Color bossBarColor = mspt <= 35.0D
                         ? BossBar.Color.GREEN
-                        : (ratio <= 0.90D ? BossBar.Color.YELLOW : BossBar.Color.RED);
+                        : (mspt <= 50.0D ? BossBar.Color.YELLOW : BossBar.Color.RED);
                     this.tpsBar.color(bossBarColor).progress((float) ratio);
                 }
 
@@ -260,7 +249,7 @@ public class RegionizedTpsBar {
 
         void setDisplay(Component component);
 
-        default void updateBarColorAndProgress(double utilPercent) {}
+        default void updateBarColorAndProgress(double mspt) {}
 
         void enable();
 
