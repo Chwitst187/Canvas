@@ -1,0 +1,207 @@
+package io.canvasmc.canvas.world;
+
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.DataResult;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
+import io.canvasmc.canvas.Config;
+import io.papermc.paper.adventure.PaperAdventure;
+import io.papermc.paper.threadedregions.RegionizedWorldData;
+import java.lang.management.ManagementFactory;
+import java.lang.management.MemoryUsage;
+import java.util.Collections;
+import java.util.Map;
+import java.util.WeakHashMap;
+import net.kyori.adventure.bossbar.BossBar;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.minimessage.MiniMessage;
+import net.minecraft.network.protocol.game.ClientboundSetActionBarTextPacket;
+import net.minecraft.server.level.ServerPlayer;
+import org.bukkit.craftbukkit.entity.CraftPlayer;
+import org.jetbrains.annotations.Contract;
+import org.jetbrains.annotations.NotNull;
+import org.jspecify.annotations.NonNull;
+
+@org.jspecify.annotations.NullMarked
+public class RegionizedRamBar {
+    private static final MiniMessage MINI_MESSAGE = MiniMessage.miniMessage();
+    private static final String GRADIENT_GOOD = "<gradient:#55ff55:#00aa00><text></gradient>";
+    private static final String GRADIENT_MEDIUM = "<gradient:#ffff55:#ffaa00><text></gradient>";
+    private static final String GRADIENT_LOW = "<gradient:#ff5555:#aa0000><text></gradient>";
+    public static final String DEFAULT_FORMAT = "<gray>Mem: <used>/<xmx> (<percent>)";
+    private static final Map<ServerPlayer, DisplayManager> DISPLAY_MANAGERS = Collections.synchronizedMap(new WeakHashMap<>());
+
+    private final RegionizedWorldData worldData;
+    private final boolean canTick;
+    private int ticksSinceLastUpdate = 0;
+
+    public RegionizedRamBar(final RegionizedWorldData worldData) {
+        this.worldData = worldData;
+        this.canTick = Config.INSTANCE.enableRamBar;
+    }
+
+    public void tick() {
+        if (!this.canTick) return;
+
+        this.ticksSinceLastUpdate++;
+        if (this.ticksSinceLastUpdate < 20) {
+            return;
+        }
+
+        this.ticksSinceLastUpdate = 0;
+        final MemoryUsage heap = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
+        final long used = heap.getUsed();
+        final long xmx = heap.getMax();
+        final double percent = safePercent(used, xmx);
+
+        for (final ServerPlayer localPlayer : this.worldData.getLocalPlayers()) {
+            final DisplayManager manager = getDisplayManager(localPlayer);
+            manager.setDisplay(buildComponent(used, xmx, percent));
+            manager.updateBarColorAndProgress(percent);
+            manager.tick();
+        }
+    }
+
+    private Component buildComponent(final long used, final long xmx, final double percent) {
+        return MINI_MESSAGE.deserialize(
+            normalizeFormat(Config.INSTANCE.ramBarFormat),
+            net.kyori.adventure.text.minimessage.tag.resolver.Placeholder.component("used", getUsedComponent(used, percent)),
+            net.kyori.adventure.text.minimessage.tag.resolver.Placeholder.component("xmx", getMaxMemComponent(xmx, percent)),
+            net.kyori.adventure.text.minimessage.tag.resolver.Placeholder.component("percent", getPercentComponent(percent))
+        );
+    }
+
+    public static @NonNull DisplayManager getDisplayManager(final @NonNull ServerPlayer player) {
+        synchronized (DISPLAY_MANAGERS) {
+            return DISPLAY_MANAGERS.computeIfAbsent(player, DisplayManager::createNew);
+        }
+    }
+
+    private @NonNull String normalizeFormat(final @NonNull String input) {
+        return input
+            .replace("%used%", "<used>")
+            .replace("%xmx%", "<xmx>")
+            .replace("%percent%", "<percent>");
+    }
+
+    private double safePercent(final long used, final long max) {
+        if (max <= 0L) return 0.0D;
+        final double p = (double) used / (double) max;
+        return Math.min(1.0D, Math.max(0.0D, p));
+    }
+
+    private @NotNull Component getUsedComponent(final long usedBytes, final double percent) {
+        if (usedBytes <= 0L) return MINI_MESSAGE.deserialize("<gray>—").append(Component.text("GB"));
+        final double usedGb = usedBytes / (1024.0D * 1024.0D * 1024.0D);
+        return gradientComponent(percent, String.format("%.2f", usedGb)).append(MINI_MESSAGE.deserialize("<gray>GB"));
+    }
+
+    private @NotNull Component getMaxMemComponent(final long maxBytes, final double percent) {
+        if (maxBytes <= 0L) return MINI_MESSAGE.deserialize("<gray>—").append(Component.text("GB"));
+        final double maxGb = maxBytes / (1024.0D * 1024.0D * 1024.0D);
+        return gradientComponent(percent, String.format("%.2f", maxGb)).append(MINI_MESSAGE.deserialize("<gray>GB"));
+    }
+
+    private @NotNull Component getPercentComponent(final double percent) {
+        if (percent <= 0.0D) return MINI_MESSAGE.deserialize("<gray>—");
+        return gradientComponent(percent, String.format("%.0f%%", percent * 100.0D));
+    }
+
+    private @NotNull Component gradientComponent(final double percent, final @NotNull String text) {
+        final String tpl = percent <= 0.50D ? GRADIENT_GOOD : (percent <= 0.70D ? GRADIENT_MEDIUM : GRADIENT_LOW);
+        final String inner = text.replace(",", "<gray>,</gray>");
+        return MINI_MESSAGE.deserialize(tpl.replace("<text>", inner));
+    }
+
+    public enum Placement {
+        ACTION_BAR, BOSS_BAR;
+        public static final Codec<Placement> CODEC = Codec.STRING.comapFlatMap((string) -> DataResult.success(Placement.valueOf(string)), Enum::name);
+    }
+
+    public interface DisplayManager {
+        @Contract(value = "_ -> new", pure = true)
+        static @NonNull DisplayManager createNew(final ServerPlayer entityPlayer) {
+            return new DisplayManager() {
+                private Component display = Component.text("Waiting for region update...");
+                public final BossBar ramBar = BossBar.bossBar(this.display, 0.0F, BossBar.Color.PURPLE, BossBar.Overlay.NOTCHED_20);
+                private volatile boolean enabled = false;
+                private Placement placement = Placement.BOSS_BAR;
+                private boolean dirty = true;
+
+                @Override
+                public void tick() {
+                    if (dirty) {
+                        final CraftPlayer bukkitEntity = entityPlayer.getBukkitEntity();
+
+                        if (placement == Placement.BOSS_BAR) {
+                            if (enabled) {
+                                ramBar.addViewer(bukkitEntity);
+                            } else {
+                                ramBar.removeViewer(bukkitEntity);
+                            }
+                        } else {
+                            ramBar.removeViewer(bukkitEntity);
+                        }
+
+                        dirty = false;
+                    }
+
+                    if (!enabled) return;
+
+                    switch (placement) {
+                        case BOSS_BAR -> ramBar.name(display);
+                        case ACTION_BAR -> entityPlayer.connection.send(new ClientboundSetActionBarTextPacket(PaperAdventure.asVanillaNullToEmpty(display)));
+                    }
+                }
+
+                @Override
+                public void setDisplay(final Component component) {
+                    this.display = component;
+                }
+
+                @Override
+                public void updateBarColorAndProgress(final double percent) {
+                    final BossBar.Color color = percent <= 0.50D ? BossBar.Color.GREEN : (percent <= 0.70D ? BossBar.Color.YELLOW : BossBar.Color.RED);
+                    this.ramBar.color(color).progress((float) percent);
+                }
+
+                @Override
+                public void updateFromEntry(final Entry entry) {
+                    this.enabled = entry.enabled();
+                    this.placement = entry.placement();
+                    this.dirty = true;
+                }
+
+                @Override
+                public Entry serializeDisplay() {
+                    return new Entry(this.enabled, this.placement);
+                }
+            };
+        }
+
+        void tick();
+
+        void setDisplay(Component component);
+
+        default void updateBarColorAndProgress(double percent) {}
+
+        void updateFromEntry(Entry entry);
+
+        Entry serializeDisplay();
+    }
+
+    public record Entry(boolean enabled, Placement placement) {
+        public static final Entry FALLBACK = new Entry(false, Placement.BOSS_BAR);
+        public static final Codec<Entry> CODEC = RecordCodecBuilder.create(
+            instance -> instance.group(
+                    Codec.BOOL.optionalFieldOf("enabled", false).forGetter(Entry::enabled),
+                    Placement.CODEC.optionalFieldOf("placement", Placement.BOSS_BAR).forGetter(Entry::placement)
+                )
+                .apply(instance, Entry::new)
+        );
+
+        @Override
+        public boolean enabled() {
+            return Config.INSTANCE.enableRamBar && enabled;
+        }
+    }
+}
