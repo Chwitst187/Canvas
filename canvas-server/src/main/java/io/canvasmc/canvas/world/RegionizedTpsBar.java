@@ -37,7 +37,7 @@ public class RegionizedTpsBar {
     private static final ThreadLocal<DecimalFormat> UTIL_FORMAT = ThreadLocal.withInitial(() -> new DecimalFormat("0.#"));
     private static final ThreadLocal<DecimalFormat> INT_FORMAT = ThreadLocal.withInitial(() -> new DecimalFormat("0"));
     public static final String DEFAULT_FORMAT =
-        "<gray>TPS: <tps> <gray>MSPT: <mspt> <gray>Ping: <ping> <gray>ChunkHot: <chunkhot>";
+        "<gray>TPS: <tps> MSPT: <mspt> Ping: <ping> ChunkHot: <chunkhot>";
     private static final AtomicReference<FormatEntry> cachedFormat = new AtomicReference<>(null);
     private final RegionizedWorldData worldData;
     private final boolean canTick;
