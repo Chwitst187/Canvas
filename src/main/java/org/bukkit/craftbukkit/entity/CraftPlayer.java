@@ -1440,6 +1440,7 @@ public class CraftPlayer extends CraftHumanEntity implements Player, PluginMessa
 
     @Override
     public Collection<EnderPearl> getEnderPearls() {
+        ca.spottedleaf.moonrise.common.util.TickThread.ensureTickThread(this.getHandle(), "Cannot get player ender pearls off the owning thread"); // Canvas - region threading
         return this.getHandle().getEnderPearls().stream().map((e) -> (EnderPearl) e.getBukkitEntity()).collect(Collectors.toList());
     }
 
