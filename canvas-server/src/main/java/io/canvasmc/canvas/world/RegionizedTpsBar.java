@@ -7,8 +7,6 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import io.canvasmc.canvas.Config;
 import io.papermc.paper.adventure.PaperAdventure;
 import io.papermc.paper.threadedregions.RegionizedWorldData;
-import io.papermc.paper.threadedregions.TickRegionScheduler;
-import io.papermc.paper.threadedregions.commands.CommandUtil;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -39,7 +37,7 @@ public class RegionizedTpsBar {
     private static final ThreadLocal<DecimalFormat> UTIL_FORMAT = ThreadLocal.withInitial(() -> new DecimalFormat("0.#"));
     private static final ThreadLocal<DecimalFormat> INT_FORMAT = ThreadLocal.withInitial(() -> new DecimalFormat("0"));
     public static final String DEFAULT_FORMAT =
-        "<gray>TPS: <tps> MSPT: <mspt> Ping: <ping> ChunkHot: <chunkhot>";
+        "<gray>TPS: <tps> <gray>-</gray> MSPT: <mspt> <gray>-</gray> Util: <util> <gray>-</gray> Players: <players>";
     private static final AtomicReference<FormatEntry> cachedFormat = new AtomicReference<>(null);
     private final RegionizedWorldData worldData;
     private final boolean canTick;
@@ -86,7 +84,7 @@ public class RegionizedTpsBar {
             for (final ServerPlayer localPlayer : this.worldData.getLocalPlayers()) {
                 final Component textComponent = buildComponent(tps, mspt, util, players, localPlayer);
                 localPlayer.canvas$tpsBarDisplay.setDisplay(textComponent);
-                localPlayer.canvas$tpsBarDisplay.updateBarColorAndProgress(mspt);
+                localPlayer.canvas$tpsBarDisplay.updateBarColorAndProgress(util);
                 localPlayer.canvas$tpsBarDisplay.tick();
             }
         }
@@ -119,8 +117,7 @@ public class RegionizedTpsBar {
     }
 
     private @NonNull Component buildComponent(final double tps, final double mspt, final double utilPercent, final int players, final ServerPlayer localPlayer) {
-        final String raw = Config.INSTANCE.tpsBarFormat;
-        final String effectiveRaw = (raw == null || raw.isBlank()) ? "" : raw;
+        final String effectiveRaw = DEFAULT_FORMAT;
         FormatEntry entry = cachedFormat.get();
         if (entry == null || !effectiveRaw.equals(entry.raw())) {
             entry = FormatEntry.compile(effectiveRaw);
@@ -134,7 +131,7 @@ public class RegionizedTpsBar {
         final Component msptComponent = gradientForMspt(mspt, msptStr);
         final Component utilComponent = gradientForUtil(utilPercent, UTIL_FORMAT.get().format(utilPercent))
             .append(Component.text("%").color(TextColor.color(0xAAAAAA)));
-        final Component playersComponent = Component.text(INT_FORMAT.get().format(players), CommandUtil.getColourForTPS(TickRegionScheduler.getTickRate()));
+        final Component playersComponent = gradientForUtil(utilPercent, INT_FORMAT.get().format(players));
 
         int pingVal = localPlayer != null ? localPlayer.connection.latency() : 0;
         final Component pingComponent = pingVal <= 0 ? MINI_MESSAGE.deserialize("<gray>—") : gradientForPing(pingVal, String.valueOf(pingVal)).append(MINI_MESSAGE.deserialize("<gray>ms"));
@@ -222,14 +219,12 @@ public class RegionizedTpsBar {
                 }
 
                 @Override
-                public void updateBarColorAndProgress(final double mspt) {
-                    BossBar.Color bossBarColor;
-                    if (mspt <= 35.0) bossBarColor = BossBar.Color.GREEN;
-                    else if (mspt <= 50.0) bossBarColor = BossBar.Color.YELLOW;
-                    else bossBarColor = BossBar.Color.RED;
-
-                    float progress = Math.min(1F, Math.max((float) (mspt / 50D), 0F));
-                    this.tpsBar.color(bossBarColor).progress(progress);
+                public void updateBarColorAndProgress(final double utilPercent) {
+                    final double ratio = Math.min(1.0D, Math.max(0.0D, utilPercent / 100.0D));
+                    final BossBar.Color bossBarColor = ratio <= 0.50D
+                        ? BossBar.Color.GREEN
+                        : (ratio <= 0.70D ? BossBar.Color.YELLOW : BossBar.Color.RED);
+                    this.tpsBar.color(bossBarColor).progress((float) ratio);
                 }
 
                 @Override
@@ -264,7 +259,7 @@ public class RegionizedTpsBar {
 
         void setDisplay(Component component);
 
-        default void updateBarColorAndProgress(double mspt) {}
+        default void updateBarColorAndProgress(double utilPercent) {}
 
         void enable();
 
