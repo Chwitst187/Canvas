@@ -510,8 +510,9 @@ public class Config {
     public boolean enableTpsBar = true;
 
     @Comment({
-        "MiniMessage-formatted line for the TPS bar. Placeholders: <tps>, <mspt>, <util>, <players>.",
-        "Legacy tokens %tps%, %mspt%, %util%, %players% are also accepted and auto-converted."
+        "MiniMessage-formatted line for the TPS bar.",
+        "Placeholders: <tps>, <mspt>, <ping>, <chunkhot>, <util>, <players>.",
+        "Legacy tokens %tps%, %mspt%, %ping%, %chunkhot%, %util%, %players% are also accepted and auto-converted."
     })
     public String tpsBarFormat = RegionizedTpsBar.DEFAULT_FORMAT;
 
