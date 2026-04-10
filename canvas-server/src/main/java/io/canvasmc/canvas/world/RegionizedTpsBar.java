@@ -37,7 +37,7 @@ public class RegionizedTpsBar {
     private static final ThreadLocal<DecimalFormat> UTIL_FORMAT = ThreadLocal.withInitial(() -> new DecimalFormat("0.#"));
     private static final ThreadLocal<DecimalFormat> INT_FORMAT = ThreadLocal.withInitial(() -> new DecimalFormat("0"));
     public static final String DEFAULT_FORMAT =
-        "<gray>TPS: <tps> <gray>-</gray> MSPT: <mspt> <gray>-</gray> Util: <util> <gray>-</gray> Players: <players>";
+        "<gray>TPS: <tps> <gray>MSPT: <mspt> <gray>Ping: <ping> <gray>ChunkHot: <chunkhot>";
     private static final AtomicReference<FormatEntry> cachedFormat = new AtomicReference<>(null);
     private final RegionizedWorldData worldData;
     private final boolean canTick;
@@ -221,9 +221,9 @@ public class RegionizedTpsBar {
                 @Override
                 public void updateBarColorAndProgress(final double utilPercent) {
                     final double ratio = Math.min(1.0D, Math.max(0.0D, utilPercent / 100.0D));
-                    final BossBar.Color bossBarColor = ratio <= 0.50D
+                    final BossBar.Color bossBarColor = ratio <= 0.70D
                         ? BossBar.Color.GREEN
-                        : (ratio <= 0.70D ? BossBar.Color.YELLOW : BossBar.Color.RED);
+                        : (ratio <= 0.90D ? BossBar.Color.YELLOW : BossBar.Color.RED);
                     this.tpsBar.color(bossBarColor).progress((float) ratio);
                 }
 
