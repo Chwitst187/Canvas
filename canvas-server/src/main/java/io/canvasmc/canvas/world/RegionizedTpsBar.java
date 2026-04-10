@@ -84,7 +84,7 @@ public class RegionizedTpsBar {
             for (final ServerPlayer localPlayer : this.worldData.getLocalPlayers()) {
                 final Component textComponent = buildComponent(tps, mspt, util, players, localPlayer);
                 localPlayer.canvas$tpsBarDisplay.setDisplay(textComponent);
-                localPlayer.canvas$tpsBarDisplay.updateBarColorAndProgress(util);
+                localPlayer.canvas$tpsBarDisplay.updateBarColorAndProgress(mspt);
                 localPlayer.canvas$tpsBarDisplay.tick();
             }
         }
@@ -220,11 +220,11 @@ public class RegionizedTpsBar {
                 }
 
                 @Override
-                public void updateBarColorAndProgress(final double utilPercent) {
-                    final double ratio = Math.min(1.0D, Math.max(0.0D, utilPercent / 100.0D));
-                    final BossBar.Color bossBarColor = ratio <= 0.70D
+                public void updateBarColorAndProgress(final double mspt) {
+                    final double ratio = Math.min(1.0D, Math.max(0.0D, mspt / 50.0D));
+                    final BossBar.Color bossBarColor = mspt <= 35.0D
                         ? BossBar.Color.GREEN
-                        : (ratio <= 0.90D ? BossBar.Color.YELLOW : BossBar.Color.RED);
+                        : (mspt <= 50.0D ? BossBar.Color.YELLOW : BossBar.Color.RED);
                     this.tpsBar.color(bossBarColor).progress((float) ratio);
                 }
 
@@ -260,7 +260,7 @@ public class RegionizedTpsBar {
 
         void setDisplay(Component component);
 
-        default void updateBarColorAndProgress(double utilPercent) {}
+        default void updateBarColorAndProgress(double mspt) {}
 
         void enable();
 
