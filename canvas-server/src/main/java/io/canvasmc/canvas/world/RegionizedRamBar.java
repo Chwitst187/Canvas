@@ -8,9 +8,9 @@ import io.papermc.paper.adventure.PaperAdventure;
 import io.papermc.paper.threadedregions.RegionizedWorldData;
 import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryUsage;
-import java.util.Collections;
 import java.util.Map;
-import java.util.WeakHashMap;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
@@ -28,7 +28,7 @@ public class RegionizedRamBar {
     private static final String GRADIENT_MEDIUM = "<gradient:#ffff55:#ffaa00><text></gradient>";
     private static final String GRADIENT_LOW = "<gradient:#ff5555:#aa0000><text></gradient>";
     public static final String DEFAULT_FORMAT = "<gray>Mem: <used>/<xmx> (<percent>)";
-    private static final Map<ServerPlayer, DisplayManager> DISPLAY_MANAGERS = Collections.synchronizedMap(new WeakHashMap<>());
+    private static final Map<UUID, DisplayManager> DISPLAY_MANAGERS = new ConcurrentHashMap<>();
 
     private final RegionizedWorldData worldData;
     private final boolean canTick;
@@ -61,7 +61,7 @@ public class RegionizedRamBar {
         }
     }
 
-    private Component buildComponent(final long used, final long xmx, final double percent) {
+    private static Component buildComponent(final long used, final long xmx, final double percent) {
         return MINI_MESSAGE.deserialize(
             normalizeFormat(Config.INSTANCE.ramBarFormat),
             net.kyori.adventure.text.minimessage.tag.resolver.Placeholder.component("used", getUsedComponent(used, percent)),
@@ -71,42 +71,52 @@ public class RegionizedRamBar {
     }
 
     public static @NonNull DisplayManager getDisplayManager(final @NonNull ServerPlayer player) {
-        synchronized (DISPLAY_MANAGERS) {
-            return DISPLAY_MANAGERS.computeIfAbsent(player, DisplayManager::createNew);
-        }
+        return DISPLAY_MANAGERS.compute(player.getUUID(), (ignored, existing) -> existing != null ? existing : DisplayManager.createNew(player));
     }
 
-    private @NonNull String normalizeFormat(final @NonNull String input) {
+    public static void renderNow(final @NonNull ServerPlayer player) {
+        final DisplayManager manager = getDisplayManager(player);
+        final MemoryUsage heap = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
+        final long used = heap.getUsed();
+        final long xmx = heap.getMax();
+        final double percent = xmx <= 0L ? 0.0D : Math.min(1.0D, Math.max(0.0D, (double) used / (double) xmx));
+
+        manager.setDisplay(buildComponent(used, xmx, percent));
+        manager.updateBarColorAndProgress(percent);
+        manager.tick();
+    }
+
+    private static @NonNull String normalizeFormat(final @NonNull String input) {
         return input
             .replace("%used%", "<used>")
             .replace("%xmx%", "<xmx>")
             .replace("%percent%", "<percent>");
     }
 
-    private double safePercent(final long used, final long max) {
+    private static double safePercent(final long used, final long max) {
         if (max <= 0L) return 0.0D;
         final double p = (double) used / (double) max;
         return Math.min(1.0D, Math.max(0.0D, p));
     }
 
-    private @NotNull Component getUsedComponent(final long usedBytes, final double percent) {
+    private static @NotNull Component getUsedComponent(final long usedBytes, final double percent) {
         if (usedBytes <= 0L) return MINI_MESSAGE.deserialize("<gray>—").append(Component.text("GB"));
         final double usedGb = usedBytes / (1024.0D * 1024.0D * 1024.0D);
         return gradientComponent(percent, String.format("%.2f", usedGb)).append(MINI_MESSAGE.deserialize("<gray>GB"));
     }
 
-    private @NotNull Component getMaxMemComponent(final long maxBytes, final double percent) {
+    private static @NotNull Component getMaxMemComponent(final long maxBytes, final double percent) {
         if (maxBytes <= 0L) return MINI_MESSAGE.deserialize("<gray>—").append(Component.text("GB"));
         final double maxGb = maxBytes / (1024.0D * 1024.0D * 1024.0D);
         return gradientComponent(percent, String.format("%.2f", maxGb)).append(MINI_MESSAGE.deserialize("<gray>GB"));
     }
 
-    private @NotNull Component getPercentComponent(final double percent) {
+    private static @NotNull Component getPercentComponent(final double percent) {
         if (percent <= 0.0D) return MINI_MESSAGE.deserialize("<gray>—");
         return gradientComponent(percent, String.format("%.0f%%", percent * 100.0D));
     }
 
-    private @NotNull Component gradientComponent(final double percent, final @NotNull String text) {
+    private static @NotNull Component gradientComponent(final double percent, final @NotNull String text) {
         final String tpl = percent <= 0.50D ? GRADIENT_GOOD : (percent <= 0.70D ? GRADIENT_MEDIUM : GRADIENT_LOW);
         final String inner = text.replace(",", "<gray>,</gray>");
         return MINI_MESSAGE.deserialize(tpl.replace("<text>", inner));
@@ -188,6 +198,7 @@ public class RegionizedRamBar {
 
         Entry serializeDisplay();
     }
+
 
     public record Entry(boolean enabled, Placement placement) {
         public static final Entry FALLBACK = new Entry(false, Placement.BOSS_BAR);
