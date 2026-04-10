@@ -135,7 +135,8 @@ public class RegionizedTpsBar {
 
         int pingVal = localPlayer != null ? localPlayer.connection.latency() : 0;
         final Component pingComponent = pingVal <= 0 ? MINI_MESSAGE.deserialize("<gray>—") : gradientForPing(pingVal, String.valueOf(pingVal)).append(MINI_MESSAGE.deserialize("<gray>ms"));
-        final Component chunkhotComponent = MINI_MESSAGE.deserialize("<gray>—");
+        final Component chunkhotComponent = gradientForUtil(utilPercent, UTIL_FORMAT.get().format(utilPercent))
+            .append(Component.text("%").color(TextColor.color(0xAAAAAA)));
 
         final TextComponent.Builder builder = Component.text();
         for (final FormatEntry.Segment segment : entry.segments()) {
