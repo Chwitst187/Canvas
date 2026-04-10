@@ -29,7 +29,6 @@ import org.jetbrains.annotations.Contract;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
-import static io.papermc.paper.threadedregions.commands.CommandUtil.SPRINTING_COLOR;
 import static net.kyori.adventure.text.Component.text;
 
 public class RegionizedTpsBar {
@@ -79,14 +78,13 @@ public class RegionizedTpsBar {
             TickData.TickReportData tickReportData = this.worldData.regionData.getRegionSchedulingHandle().getTickReport5s(System.nanoTime());
             TickData.SegmentedAverage tpsAverage = tickReportData.tpsData();
             TickData.SegmentedAverage msptAverage = tickReportData.timePerTickData();
-            final double util = tickReportData.utilisation() * 100;
             final double tps = tpsAverage.segmentAll().average();
             final double mspt = msptAverage.segmentAll().average() / 1.0E6;
+            final double util = tickReportData.utilisation() * 100;
             final int players = this.worldData.getPlayerCount();
-            final boolean sprinting = this.worldData.regionData.getRegionSchedulingHandle().getTickManager().isSprinting();
             // update players
             for (final ServerPlayer localPlayer : this.worldData.getLocalPlayers()) {
-                final Component textComponent = buildComponent(tps, mspt, util, players, sprinting, localPlayer);
+                final Component textComponent = buildComponent(tps, mspt, util, players, localPlayer);
                 localPlayer.canvas$tpsBarDisplay.setDisplay(textComponent);
                 localPlayer.canvas$tpsBarDisplay.updateBarColorAndProgress(mspt);
                 localPlayer.canvas$tpsBarDisplay.tick();
@@ -120,7 +118,7 @@ public class RegionizedTpsBar {
         return gradient(tpl, value);
     }
 
-    private @NonNull Component buildComponent(final double tps, final double mspt, final double utilPercent, final int players, final boolean sprinting, final ServerPlayer localPlayer) {
+    private @NonNull Component buildComponent(final double tps, final double mspt, final double utilPercent, final int players, final ServerPlayer localPlayer) {
         final String raw = Config.INSTANCE.tpsBarFormat;
         final String effectiveRaw = (raw == null || raw.isBlank()) ? "" : raw;
         FormatEntry entry = cachedFormat.get();
@@ -132,10 +130,11 @@ public class RegionizedTpsBar {
         String tpsStr = tps <= 0.0 ? "—" : String.format("%.2f", tps);
         String msptStr = mspt <= 0.0 ? "—" : String.format("%.2f", mspt);
 
-        final Component tpsComponent = sprinting ? Component.text(tpsStr, SPRINTING_COLOR) : gradientForTps(tps, tpsStr);
-        final Component msptComponent = sprinting ? Component.text(msptStr, SPRINTING_COLOR) : gradientForMspt(mspt, msptStr);
-        final Component utilComponent = (sprinting ? Component.text(UTIL_FORMAT.get().format(utilPercent), SPRINTING_COLOR) : gradientForUtil(utilPercent, UTIL_FORMAT.get().format(utilPercent))).append(Component.text("%").color(sprinting ? SPRINTING_COLOR : TextColor.color(0xAAAAAA)));
-        final Component playersComponent = Component.text(INT_FORMAT.get().format(players), sprinting ? SPRINTING_COLOR : CommandUtil.getColourForTPS(TickRegionScheduler.getTickRate()));
+        final Component tpsComponent = gradientForTps(tps, tpsStr);
+        final Component msptComponent = gradientForMspt(mspt, msptStr);
+        final Component utilComponent = gradientForUtil(utilPercent, UTIL_FORMAT.get().format(utilPercent))
+            .append(Component.text("%").color(TextColor.color(0xAAAAAA)));
+        final Component playersComponent = Component.text(INT_FORMAT.get().format(players), CommandUtil.getColourForTPS(TickRegionScheduler.getTickRate()));
 
         int pingVal = localPlayer != null ? localPlayer.connection.latency() : 0;
         final Component pingComponent = pingVal <= 0 ? MINI_MESSAGE.deserialize("<gray>—") : gradientForPing(pingVal, String.valueOf(pingVal)).append(MINI_MESSAGE.deserialize("<gray>ms"));
@@ -291,10 +290,10 @@ public class RegionizedTpsBar {
             return input
                 .replace("%tps%", "<tps>")
                 .replace("%mspt%", "<mspt>")
-                .replace("%util%", "<util>")
-                .replace("%players%", "<players>")
                 .replace("%ping%", "<ping>")
-                .replace("%chunkhot%", "<chunkhot>");
+                .replace("%chunkhot%", "<chunkhot>")
+                .replace("%util%", "<util>")
+                .replace("%players%", "<players>");
         }
 
         private static @NonNull List<Segment> buildSegments(final String normalized) {
