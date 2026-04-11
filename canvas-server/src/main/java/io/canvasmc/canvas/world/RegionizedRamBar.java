@@ -83,7 +83,9 @@ public class RegionizedRamBar {
 
 
     public static @NonNull DisplayManager managerFor(final @NonNull ServerPlayer player) {
-        return DISPLAY_MANAGERS.computeIfAbsent(player.getUUID(), ignored -> DisplayManager.createNew(player));
+        final DisplayManager manager = DISPLAY_MANAGERS.computeIfAbsent(player.getUUID(), ignored -> DisplayManager.createNew(player));
+        manager.bind(player);
+        return manager;
     }
 
 
@@ -132,6 +134,7 @@ public class RegionizedRamBar {
         @Contract(value = "_ -> new", pure = true)
         static @NonNull DisplayManager createNew(final ServerPlayer entityPlayer) {
             return new DisplayManager() {
+                private volatile ServerPlayer boundPlayer = entityPlayer;
                 private Component display = Component.text("Waiting for region update...");
                 public final BossBar ramBar = BossBar.bossBar(this.display, 0.0F, BossBar.Color.PURPLE, BossBar.Overlay.NOTCHED_20);
                 private volatile boolean enabled = false;
@@ -141,7 +144,7 @@ public class RegionizedRamBar {
                 @Override
                 public void tick() {
                     if (dirty) {
-                        final CraftPlayer bukkitEntity = entityPlayer.getBukkitEntity();
+                        final CraftPlayer bukkitEntity = this.boundPlayer.getBukkitEntity();
 
                         if (placement == Placement.BOSS_BAR) {
                             if (enabled) {
@@ -160,8 +163,13 @@ public class RegionizedRamBar {
 
                     switch (placement) {
                         case BOSS_BAR -> ramBar.name(display);
-                        case ACTION_BAR -> entityPlayer.connection.send(new ClientboundSetActionBarTextPacket(PaperAdventure.asVanillaNullToEmpty(display)));
+                        case ACTION_BAR -> this.boundPlayer.connection.send(new ClientboundSetActionBarTextPacket(PaperAdventure.asVanillaNullToEmpty(display)));
                     }
+                }
+
+                @Override
+                public void bind(final ServerPlayer player) {
+                    this.boundPlayer = player;
                 }
 
                 @Override
@@ -202,6 +210,8 @@ public class RegionizedRamBar {
         }
 
         void tick();
+
+        void bind(ServerPlayer player);
 
         void setDisplay(Component component);
 
