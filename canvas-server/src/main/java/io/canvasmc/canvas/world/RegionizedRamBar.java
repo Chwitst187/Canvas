@@ -6,6 +6,7 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import io.canvasmc.canvas.Config;
 import io.papermc.paper.adventure.PaperAdventure;
 import io.papermc.paper.threadedregions.RegionizedWorldData;
+import java.lang.reflect.Field;
 import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryUsage;
 import java.util.Map;
@@ -25,6 +26,8 @@ import org.jspecify.annotations.NonNull;
 public class RegionizedRamBar {
     private static final int UPDATE_INTERVAL_TICKS = 20;
     private static final Map<UUID, DisplayManager> DISPLAY_MANAGERS = new ConcurrentHashMap<>();
+    private static volatile boolean RESOLVED_PLAYER_FIELD = false;
+    private static Field PLAYER_RAM_BAR_FIELD;
     private static final MiniMessage MINI_MESSAGE = MiniMessage.miniMessage();
     private static final String GRADIENT_GOOD = "<gradient:#55ff55:#00aa00><text></gradient>";
     private static final String GRADIENT_MEDIUM = "<gradient:#ffff55:#ffaa00><text></gradient>";
@@ -82,7 +85,40 @@ public class RegionizedRamBar {
     }
 
     public static @NonNull DisplayManager getDisplayManager(final @NonNull ServerPlayer player) {
+        final DisplayManager playerDisplay = tryGetPlayerOwnedManager(player);
+        if (playerDisplay != null) {
+            return playerDisplay;
+        }
         return DISPLAY_MANAGERS.computeIfAbsent(player.getUUID(), ignored -> DisplayManager.createNew(player));
+    }
+
+    private static DisplayManager tryGetPlayerOwnedManager(final ServerPlayer player) {
+        final Field field = getPlayerRamBarField();
+        if (field == null) {
+            return null;
+        }
+        try {
+            final Object value = field.get(player);
+            return value instanceof DisplayManager displayManager ? displayManager : null;
+        } catch (final IllegalAccessException ignored) {
+            return null;
+        }
+    }
+
+    private static Field getPlayerRamBarField() {
+        if (RESOLVED_PLAYER_FIELD) {
+            return PLAYER_RAM_BAR_FIELD;
+        }
+
+        RESOLVED_PLAYER_FIELD = true;
+        try {
+            final Field field = ServerPlayer.class.getDeclaredField("canvas$ramBarDisplay");
+            field.setAccessible(true);
+            PLAYER_RAM_BAR_FIELD = field;
+        } catch (final NoSuchFieldException ignored) {
+            PLAYER_RAM_BAR_FIELD = null;
+        }
+        return PLAYER_RAM_BAR_FIELD;
     }
 
     private static @NonNull String normalizeFormat(final @NonNull String input) {
