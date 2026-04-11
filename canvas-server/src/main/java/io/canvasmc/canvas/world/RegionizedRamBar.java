@@ -8,9 +8,6 @@ import io.papermc.paper.adventure.PaperAdventure;
 import io.papermc.paper.threadedregions.RegionizedWorldData;
 import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryUsage;
-import java.util.Collections;
-import java.util.Map;
-import java.util.WeakHashMap;
 import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
@@ -33,11 +30,6 @@ public class RegionizedRamBar {
     private final boolean canTick;
     private int ticksSinceLastUpdate = 0;
 
-    private static final Map<ServerPlayer, DisplayManager> DISPLAY_MANAGERS = Collections.synchronizedMap(new WeakHashMap<>());
-
-    public static @NonNull DisplayManager getDisplayManager(final @NonNull ServerPlayer player) {
-        return DISPLAY_MANAGERS.computeIfAbsent(player, DisplayManager::createNew);
-    }
 
     public RegionizedRamBar(final RegionizedWorldData worldData) {
         this.worldData = worldData;
@@ -56,7 +48,7 @@ public class RegionizedRamBar {
             final double percent = safePercent(used, xmx);
             final Component display = buildComponent(used, xmx, percent);
             for (final ServerPlayer localPlayer : this.worldData.getLocalPlayers()) {
-                final DisplayManager manager = getDisplayManager(localPlayer);
+                final DisplayManager manager = localPlayer.canvas$ramBarDisplay;
                 manager.setDisplay(display);
                 manager.updateBarColorAndProgress(percent);
                 manager.tick();
@@ -74,7 +66,7 @@ public class RegionizedRamBar {
     }
 
     public static void renderNow(final @NonNull ServerPlayer player) {
-        final DisplayManager manager = getDisplayManager(player);
+        final DisplayManager manager = player.canvas$ramBarDisplay;
         final MemoryUsage heap = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
         final long used = heap.getUsed();
         final long xmx = heap.getMax();

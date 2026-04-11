@@ -19,7 +19,7 @@ import static net.minecraft.commands.Commands.argument;
 public class RamBarCommand implements Command {
 
     private static void toggleRamBar(final CommandSourceStack source, final ServerPlayer player) {
-        final RegionizedRamBar.DisplayManager display = RegionizedRamBar.getDisplayManager(player);
+        final RegionizedRamBar.DisplayManager display = player.canvas$ramBarDisplay;
         final RegionizedRamBar.Entry current = display.serializeDisplay();
         final RegionizedRamBar.Entry updated = new RegionizedRamBar.Entry(!current.enabled(), current.placement());
         display.updateFromEntry(updated);
@@ -33,7 +33,7 @@ public class RamBarCommand implements Command {
 
     private static void setRamBarPlacement(final CommandSourceStack source, final ServerPlayer player,
                                            final RegionizedRamBar.Placement newPlacement, final String argName) {
-        final RegionizedRamBar.DisplayManager display = RegionizedRamBar.getDisplayManager(player);
+        final RegionizedRamBar.DisplayManager display = player.canvas$ramBarDisplay;
         final RegionizedRamBar.Entry current = display.serializeDisplay();
         final RegionizedRamBar.Entry updated = new RegionizedRamBar.Entry(current.enabled(), newPlacement);
         display.updateFromEntry(updated);
