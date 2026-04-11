@@ -8,9 +8,6 @@ import io.papermc.paper.adventure.PaperAdventure;
 import io.papermc.paper.threadedregions.RegionizedWorldData;
 import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryUsage;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
@@ -24,7 +21,6 @@ import org.jspecify.annotations.NonNull;
 @org.jspecify.annotations.NullMarked
 public class RegionizedRamBar {
     private static final int UPDATE_INTERVAL_TICKS = 20;
-    private static final Map<UUID, DisplayManager> DISPLAY_MANAGERS = new ConcurrentHashMap<>();
     private static final MiniMessage MINI_MESSAGE = MiniMessage.miniMessage();
     private static final String GRADIENT_GOOD = "<gradient:#55ff55:#00aa00><text></gradient>";
     private static final String GRADIENT_MEDIUM = "<gradient:#ffff55:#ffaa00><text></gradient>";
@@ -52,7 +48,7 @@ public class RegionizedRamBar {
             final double percent = safePercent(used, xmx);
             final Component display = buildComponent(used, xmx, percent);
             for (final ServerPlayer localPlayer : this.worldData.getLocalPlayers()) {
-                final DisplayManager manager = getDisplayManager(localPlayer);
+                final DisplayManager manager = localPlayer.canvas$ramBarDisplay;
                 manager.setDisplay(display);
                 manager.updateBarColorAndProgress(percent);
                 manager.tick();
@@ -70,7 +66,7 @@ public class RegionizedRamBar {
     }
 
     public static void renderNow(final @NonNull ServerPlayer player) {
-        final DisplayManager manager = getDisplayManager(player);
+        final DisplayManager manager = player.canvas$ramBarDisplay;
         final MemoryUsage heap = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
         final long used = heap.getUsed();
         final long xmx = heap.getMax();
@@ -79,10 +75,6 @@ public class RegionizedRamBar {
         manager.setDisplay(buildComponent(used, xmx, percent));
         manager.updateBarColorAndProgress(percent);
         manager.tick();
-    }
-
-    public static @NonNull DisplayManager getDisplayManager(final @NonNull ServerPlayer player) {
-        return DISPLAY_MANAGERS.computeIfAbsent(player.getUUID(), ignored -> DisplayManager.createNew(player));
     }
 
     private static @NonNull String normalizeFormat(final @NonNull String input) {
