@@ -8,6 +8,7 @@ import io.papermc.paper.adventure.PaperAdventure;
 import io.papermc.paper.threadedregions.RegionizedWorldData;
 import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryUsage;
+import java.lang.reflect.Field;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -33,6 +34,7 @@ public class RegionizedRamBar {
     private final boolean canTick;
     private int ticksSinceLastUpdate = 0;
     private static final ConcurrentMap<UUID, DisplayManager> DISPLAY_MANAGERS = new ConcurrentHashMap<>();
+    private static final @org.jspecify.annotations.Nullable Field RAM_BAR_FIELD = resolveRamBarField();
 
 
     public RegionizedRamBar(final RegionizedWorldData worldData) {
@@ -74,7 +76,7 @@ public class RegionizedRamBar {
         final MemoryUsage heap = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
         final long used = heap.getUsed();
         final long xmx = heap.getMax();
-        final double percent = xmx <= 0L ? 0.0D : Math.min(1.0D, Math.max(0.0D, (double) used / (double) xmx));
+        final double percent = xmx <= 0L ? 0.0D : Math.clamp((double) used / (double) xmx, 0.0D, 1.0D);
 
         manager.setDisplay(buildComponent(used, xmx, percent));
         manager.updateBarColorAndProgress(percent);
@@ -83,9 +85,27 @@ public class RegionizedRamBar {
 
 
     public static @NonNull DisplayManager managerFor(final @NonNull ServerPlayer player) {
-        final DisplayManager manager = DISPLAY_MANAGERS.computeIfAbsent(player.getUUID(), ignored -> DisplayManager.createNew(player));
-        manager.bind(player);
-        return manager;
+        if (RAM_BAR_FIELD != null) {
+            try {
+                final Object value = RAM_BAR_FIELD.get(player);
+                if (value instanceof DisplayManager manager) {
+                    return manager;
+                }
+            } catch (final IllegalAccessException ignored) {
+            }
+        }
+
+        return DISPLAY_MANAGERS.computeIfAbsent(player.getUUID(), ignored -> DisplayManager.createNew(player));
+    }
+
+    private static @org.jspecify.annotations.Nullable Field resolveRamBarField() {
+        try {
+            final Field field = ServerPlayer.class.getField("canvas$ramBarDisplay");
+            field.setAccessible(true);
+            return field;
+        } catch (final ReflectiveOperationException ignored) {
+            return null;
+        }
     }
 
 
@@ -99,7 +119,7 @@ public class RegionizedRamBar {
     private static double safePercent(final long used, final long max) {
         if (max <= 0L) return 0.0D;
         final double p = (double) used / (double) max;
-        return Math.min(1.0D, Math.max(0.0D, p));
+        return Math.clamp(p, 0.0D, 1.0D);
     }
 
     private static @NotNull Component getUsedComponent(final long usedBytes, final double percent) {
@@ -134,7 +154,6 @@ public class RegionizedRamBar {
         @Contract(value = "_ -> new", pure = true)
         static @NonNull DisplayManager createNew(final ServerPlayer entityPlayer) {
             return new DisplayManager() {
-                private volatile ServerPlayer boundPlayer = entityPlayer;
                 private Component display = Component.text("Waiting for region update...");
                 public final BossBar ramBar = BossBar.bossBar(this.display, 0.0F, BossBar.Color.PURPLE, BossBar.Overlay.NOTCHED_20);
                 private volatile boolean enabled = false;
@@ -144,9 +163,11 @@ public class RegionizedRamBar {
                 @Override
                 public void tick() {
                     if (dirty) {
-                        final CraftPlayer bukkitEntity = this.boundPlayer.getBukkitEntity();
+                        final CraftPlayer bukkitEntity = entityPlayer.getBukkitEntity();
 
                         if (placement == Placement.BOSS_BAR) {
+                            // Ensure stale action-bar text is cleared when switching to boss-bar mode.
+                            entityPlayer.connection.send(new ClientboundSetActionBarTextPacket(PaperAdventure.asVanillaNullToEmpty(Component.empty())));
                             if (enabled) {
                                 ramBar.addViewer(bukkitEntity);
                             } else {
@@ -154,6 +175,10 @@ public class RegionizedRamBar {
                             }
                         } else {
                             ramBar.removeViewer(bukkitEntity);
+                            if (!enabled) {
+                                // ACTION_BAR is client-side text; send an empty packet to clear immediately on disable.
+                                entityPlayer.connection.send(new ClientboundSetActionBarTextPacket(PaperAdventure.asVanillaNullToEmpty(Component.empty())));
+                            }
                         }
 
                         dirty = false;
@@ -163,13 +188,8 @@ public class RegionizedRamBar {
 
                     switch (placement) {
                         case BOSS_BAR -> ramBar.name(display);
-                        case ACTION_BAR -> this.boundPlayer.connection.send(new ClientboundSetActionBarTextPacket(PaperAdventure.asVanillaNullToEmpty(display)));
+                        case ACTION_BAR -> entityPlayer.connection.send(new ClientboundSetActionBarTextPacket(PaperAdventure.asVanillaNullToEmpty(display)));
                     }
-                }
-
-                @Override
-                public void bind(final ServerPlayer player) {
-                    this.boundPlayer = player;
                 }
 
                 @Override
@@ -211,7 +231,6 @@ public class RegionizedRamBar {
 
         void tick();
 
-        void bind(ServerPlayer player);
 
         void setDisplay(Component component);
 
