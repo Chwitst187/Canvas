@@ -23,9 +23,6 @@ public class RamBarCommand implements Command {
         final RegionizedRamBar.Entry current = display.serializeDisplay();
         final RegionizedRamBar.Entry updated = new RegionizedRamBar.Entry(!current.enabled(), current.placement());
         display.updateFromEntry(updated);
-        if (updated.enabled()) {
-            RegionizedRamBar.renderNow(player);
-        }
 
         final String message = (updated.enabled() ? "Enabled" : "Disabled") + " RAM bar for " + player.getName().getString();
         source.sendSuccess(() -> Component.literal(message), true);
@@ -37,9 +34,6 @@ public class RamBarCommand implements Command {
         final RegionizedRamBar.Entry current = display.serializeDisplay();
         final RegionizedRamBar.Entry updated = new RegionizedRamBar.Entry(current.enabled(), newPlacement);
         display.updateFromEntry(updated);
-        if (updated.enabled()) {
-            RegionizedRamBar.renderNow(player);
-        }
 
         final String message = "Set RAM bar placement for " + player.getName().getString() + " to " + argName;
         source.sendSuccess(() -> Component.literal(message), true);
