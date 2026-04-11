@@ -8,6 +8,9 @@ import io.papermc.paper.adventure.PaperAdventure;
 import io.papermc.paper.threadedregions.RegionizedWorldData;
 import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryUsage;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
@@ -29,6 +32,7 @@ public class RegionizedRamBar {
     private final RegionizedWorldData worldData;
     private final boolean canTick;
     private int ticksSinceLastUpdate = 0;
+    private static final ConcurrentMap<UUID, DisplayManager> DISPLAY_MANAGERS = new ConcurrentHashMap<>();
 
 
     public RegionizedRamBar(final RegionizedWorldData worldData) {
@@ -48,7 +52,7 @@ public class RegionizedRamBar {
             final double percent = safePercent(used, xmx);
             final Component display = buildComponent(used, xmx, percent);
             for (final ServerPlayer localPlayer : this.worldData.getLocalPlayers()) {
-                final DisplayManager manager = localPlayer.canvas$ramBarDisplay;
+                final DisplayManager manager = managerFor(localPlayer);
                 manager.setDisplay(display);
                 manager.updateBarColorAndProgress(percent);
                 manager.tick();
@@ -66,7 +70,7 @@ public class RegionizedRamBar {
     }
 
     public static void renderNow(final @NonNull ServerPlayer player) {
-        final DisplayManager manager = player.canvas$ramBarDisplay;
+        final DisplayManager manager = managerFor(player);
         final MemoryUsage heap = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
         final long used = heap.getUsed();
         final long xmx = heap.getMax();
@@ -77,6 +81,12 @@ public class RegionizedRamBar {
         manager.tick();
     }
 
+
+    public static @NonNull DisplayManager managerFor(final @NonNull ServerPlayer player) {
+        final DisplayManager manager = DISPLAY_MANAGERS.computeIfAbsent(player.getUUID(), ignored -> DisplayManager.createNew(player));
+        manager.bind(player);
+        return manager;
+    }
 
 
     private static @NonNull String normalizeFormat(final @NonNull String input) {
@@ -124,6 +134,7 @@ public class RegionizedRamBar {
         @Contract(value = "_ -> new", pure = true)
         static @NonNull DisplayManager createNew(final ServerPlayer entityPlayer) {
             return new DisplayManager() {
+                private volatile ServerPlayer boundPlayer = entityPlayer;
                 private Component display = Component.text("Waiting for region update...");
                 public final BossBar ramBar = BossBar.bossBar(this.display, 0.0F, BossBar.Color.PURPLE, BossBar.Overlay.NOTCHED_20);
                 private volatile boolean enabled = false;
@@ -133,7 +144,7 @@ public class RegionizedRamBar {
                 @Override
                 public void tick() {
                     if (dirty) {
-                        final CraftPlayer bukkitEntity = entityPlayer.getBukkitEntity();
+                        final CraftPlayer bukkitEntity = this.boundPlayer.getBukkitEntity();
 
                         if (placement == Placement.BOSS_BAR) {
                             if (enabled) {
@@ -152,8 +163,13 @@ public class RegionizedRamBar {
 
                     switch (placement) {
                         case BOSS_BAR -> ramBar.name(display);
-                        case ACTION_BAR -> entityPlayer.connection.send(new ClientboundSetActionBarTextPacket(PaperAdventure.asVanillaNullToEmpty(display)));
+                        case ACTION_BAR -> this.boundPlayer.connection.send(new ClientboundSetActionBarTextPacket(PaperAdventure.asVanillaNullToEmpty(display)));
                     }
+                }
+
+                @Override
+                public void bind(final ServerPlayer player) {
+                    this.boundPlayer = player;
                 }
 
                 @Override
@@ -165,6 +181,18 @@ public class RegionizedRamBar {
                 public void updateBarColorAndProgress(final double percent) {
                     final BossBar.Color color = percent <= 0.50D ? BossBar.Color.GREEN : (percent <= 0.70D ? BossBar.Color.YELLOW : BossBar.Color.RED);
                     this.ramBar.color(color).progress((float) percent);
+                }
+
+                @Override
+                public void enable() {
+                    this.enabled = true;
+                    this.dirty = true;
+                }
+
+                @Override
+                public void disable() {
+                    this.enabled = false;
+                    this.dirty = true;
                 }
 
                 @Override
@@ -183,9 +211,15 @@ public class RegionizedRamBar {
 
         void tick();
 
+        void bind(ServerPlayer player);
+
         void setDisplay(Component component);
 
         default void updateBarColorAndProgress(double percent) {}
+
+        void enable();
+
+        void disable();
 
         void updateFromEntry(Entry entry);
 
