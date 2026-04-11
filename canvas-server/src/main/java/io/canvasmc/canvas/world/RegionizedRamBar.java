@@ -48,26 +48,19 @@ public class RegionizedRamBar {
         if (!this.canTick) return;
 
         this.ticksSinceLastUpdate++;
-        final boolean shouldRefresh = this.ticksSinceLastUpdate >= UPDATE_INTERVAL_TICKS;
-        Component display = null;
-        double percent = 0.0D;
-
-        if (shouldRefresh) {
+        if (this.ticksSinceLastUpdate >= UPDATE_INTERVAL_TICKS) {
             this.ticksSinceLastUpdate = 0;
             final MemoryUsage heap = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
             final long used = heap.getUsed();
             final long xmx = heap.getMax();
-            percent = safePercent(used, xmx);
-            display = buildComponent(used, xmx, percent);
-        }
-
-        for (final ServerPlayer localPlayer : this.worldData.getLocalPlayers()) {
-            final DisplayManager manager = getDisplayManager(localPlayer);
-            if (shouldRefresh) {
+            final double percent = safePercent(used, xmx);
+            final Component display = buildComponent(used, xmx, percent);
+            for (final ServerPlayer localPlayer : this.worldData.getLocalPlayers()) {
+                final DisplayManager manager = getDisplayManager(localPlayer);
                 manager.setDisplay(display);
                 manager.updateBarColorAndProgress(percent);
+                manager.tick();
             }
-            manager.tick();
         }
     }
 
