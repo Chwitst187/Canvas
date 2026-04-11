@@ -83,8 +83,6 @@ public class RegionizedRamBar {
         manager.tick();
     }
 
-
-
     public static @NonNull DisplayManager getDisplayManager(final @NonNull ServerPlayer player) {
         final Field field = resolveServerPlayerRamBarField();
         if (field != null) {
@@ -121,6 +119,8 @@ public class RegionizedRamBar {
             return serverPlayerRamBarField;
         }
     }
+
+
 
     private static @NonNull String normalizeFormat(final @NonNull String input) {
         return input
