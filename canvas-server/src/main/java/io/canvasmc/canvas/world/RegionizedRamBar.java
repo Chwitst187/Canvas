@@ -168,6 +168,18 @@ public class RegionizedRamBar {
                 }
 
                 @Override
+                public void enable() {
+                    this.enabled = true;
+                    this.dirty = true;
+                }
+
+                @Override
+                public void disable() {
+                    this.enabled = false;
+                    this.dirty = true;
+                }
+
+                @Override
                 public void updateFromEntry(final Entry entry) {
                     this.enabled = entry.enabled();
                     this.placement = entry.placement();
@@ -186,6 +198,10 @@ public class RegionizedRamBar {
         void setDisplay(Component component);
 
         default void updateBarColorAndProgress(double percent) {}
+
+        void enable();
+
+        void disable();
 
         void updateFromEntry(Entry entry);
 
