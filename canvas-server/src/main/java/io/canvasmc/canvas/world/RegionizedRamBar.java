@@ -23,6 +23,7 @@ import org.jspecify.annotations.NonNull;
 
 @org.jspecify.annotations.NullMarked
 public class RegionizedRamBar {
+    private static final int UPDATE_INTERVAL_TICKS = 20;
     private static final MiniMessage MINI_MESSAGE = MiniMessage.miniMessage();
     private static final String GRADIENT_GOOD = "<gradient:#55ff55:#00aa00><text></gradient>";
     private static final String GRADIENT_MEDIUM = "<gradient:#ffff55:#ffaa00><text></gradient>";
@@ -43,21 +44,19 @@ public class RegionizedRamBar {
         if (!this.canTick) return;
 
         this.ticksSinceLastUpdate++;
-        if (this.ticksSinceLastUpdate < 20) {
-            return;
-        }
+        if (this.ticksSinceLastUpdate >= UPDATE_INTERVAL_TICKS) {
+            this.ticksSinceLastUpdate = 0;
+            final MemoryUsage heap = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
+            final long used = heap.getUsed();
+            final long xmx = heap.getMax();
+            final double percent = safePercent(used, xmx);
 
-        this.ticksSinceLastUpdate = 0;
-        final MemoryUsage heap = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
-        final long used = heap.getUsed();
-        final long xmx = heap.getMax();
-        final double percent = safePercent(used, xmx);
-
-        for (final ServerPlayer localPlayer : this.worldData.getLocalPlayers()) {
-            final DisplayManager manager = getDisplayManager(localPlayer);
-            manager.setDisplay(buildComponent(used, xmx, percent));
-            manager.updateBarColorAndProgress(percent);
-            manager.tick();
+            for (final ServerPlayer localPlayer : this.worldData.getLocalPlayers()) {
+                final DisplayManager manager = getDisplayManager(localPlayer);
+                manager.setDisplay(buildComponent(used, xmx, percent));
+                manager.updateBarColorAndProgress(percent);
+                manager.tick();
+            }
         }
     }
 
