@@ -21,16 +21,16 @@ public class RamBarCommand implements Command {
     private static void toggleRamBar(final CommandSourceStack source, final ServerPlayer player) {
         final RegionizedRamBar.DisplayManager display = RegionizedRamBar.managerFor(player);
         final RegionizedRamBar.Entry current = display.serializeDisplay();
-        final boolean nextEnabled = !current.enabled();
-        if (nextEnabled) {
-            display.enable();
-            display.updateFromEntry(new RegionizedRamBar.Entry(true, current.placement()));
+        final RegionizedRamBar.Entry updated = new RegionizedRamBar.Entry(!current.enabled(), current.placement());
+        display.updateFromEntry(updated);
+        if (updated.enabled()) {
             RegionizedRamBar.renderNow(player);
         } else {
-            display.disable();
+            // Apply dirty state immediately so boss/action bar disappears without waiting for next interval.
+            display.tick();
         }
 
-        final String message = (nextEnabled ? "Enabled" : "Disabled") + " RAM bar for " + player.getName().getString();
+        final String message = (updated.enabled() ? "Enabled" : "Disabled") + " RAM bar for " + player.getName().getString();
         source.sendSuccess(() -> Component.literal(message), true);
     }
 
