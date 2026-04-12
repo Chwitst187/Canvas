@@ -29,7 +29,9 @@
          //this.tickCount++; // Folia - region threading
          //this.tickRateManager.tick(); // Folia - region threading
 +        region.world.getCurrentWorldData().tpsbar.tick(); // Canvas - tpsbar
++        region.world.getCurrentWorldData().regionbar.tick(); // Canvas - regionbar
 +        region.world.getCurrentWorldData().rambar.tick(); // Canvas - rambar
++        region.world.getCurrentWorldData().cpubar.tick(); // Canvas - cpubar
          this.tickChildren(hasTimeLeft, region); // Folia - region threading
          if (false && nanos - this.lastServerStatus >= STATUS_EXPIRE_TIME_NANOS) { // Folia - region threading
              this.lastServerStatus = nanos;

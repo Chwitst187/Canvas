@@ -5,7 +5,9 @@
      public boolean suppressTrackerForLogin = false; // Paper - Fire PlayerJoinEvent when Player is actually ready
      // CraftBukkit end
 +    public final io.canvasmc.canvas.world.RegionizedTpsBar.DisplayManager canvas$tpsBarDisplay = io.canvasmc.canvas.world.RegionizedTpsBar.DisplayManager.createNew(this); // Canvas - tpsbar
++    public final io.canvasmc.canvas.world.RegionizedRegionBar.DisplayManager canvas$regionBarDisplay = io.canvasmc.canvas.world.RegionizedRegionBar.DisplayManager.createNew(this); // Canvas - regionbar
 +    public final io.canvasmc.canvas.world.RegionizedRamBar.DisplayManager canvas$ramBarDisplay = io.canvasmc.canvas.world.RegionizedRamBar.DisplayManager.createNew(this); // Canvas - rambar
++    public final io.canvasmc.canvas.world.RegionizedCpuBar.DisplayManager canvas$cpuBarDisplay = io.canvasmc.canvas.world.RegionizedCpuBar.DisplayManager.createNew(this); // Canvas - cpubar
 +    public final int canvas$infoBucketIndex; // Canvas - optimize playerlist tick
      public boolean isRealPlayer; // Paper
      public com.destroystokyo.paper.event.entity.@Nullable PlayerNaturallySpawnCreaturesEvent playerNaturallySpawnedEvent; // Paper - PlayerNaturallySpawnCreaturesEvent
@@ -57,7 +59,9 @@
          this.spawnExtraParticlesOnFall = input.getBooleanOr("spawn_extra_particles_on_fall", false);
          this.raidOmenPosition = input.read("raid_omen_position", BlockPos.CODEC).orElse(null);
 +        this.canvas$tpsBarDisplay.updateFromEntry(input.read("TpsBar", io.canvasmc.canvas.world.RegionizedTpsBar.Entry.CODEC).orElse(io.canvasmc.canvas.world.RegionizedTpsBar.Entry.FALLBACK)); // Canvas - tpsbar
++        this.canvas$regionBarDisplay.updateFromEntry(input.read("RegionBar", io.canvasmc.canvas.world.RegionizedRegionBar.Entry.CODEC).orElse(io.canvasmc.canvas.world.RegionizedRegionBar.Entry.FALLBACK)); // Canvas - regionbar
 +        this.canvas$ramBarDisplay.updateFromEntry(input.read("RamBar", io.canvasmc.canvas.world.RegionizedRamBar.Entry.CODEC).orElse(io.canvasmc.canvas.world.RegionizedRamBar.Entry.FALLBACK)); // Canvas - rambar
++        this.canvas$cpuBarDisplay.updateFromEntry(input.read("CpuBar", io.canvasmc.canvas.world.RegionizedCpuBar.Entry.CODEC).orElse(io.canvasmc.canvas.world.RegionizedCpuBar.Entry.FALLBACK)); // Canvas - cpubar
          // Paper start - Expand PlayerGameModeChangeEvent
          this.loadGameTypes(input);
      }
@@ -66,7 +70,9 @@
          }
          this.getBukkitEntity().setExtraData(output); // CraftBukkit
 +        output.store("TpsBar", io.canvasmc.canvas.world.RegionizedTpsBar.Entry.CODEC, this.canvas$tpsBarDisplay.serializeDisplay()); // Canvas - tpsbar
++        output.store("RegionBar", io.canvasmc.canvas.world.RegionizedRegionBar.Entry.CODEC, this.canvas$regionBarDisplay.serializeDisplay()); // Canvas - regionbar
 +        output.store("RamBar", io.canvasmc.canvas.world.RegionizedRamBar.Entry.CODEC, this.canvas$ramBarDisplay.serializeDisplay()); // Canvas - rambar
++        output.store("CpuBar", io.canvasmc.canvas.world.RegionizedCpuBar.Entry.CODEC, this.canvas$cpuBarDisplay.serializeDisplay()); // Canvas - cpubar
      }
  
      private void saveParentVehicle(ValueOutput output) {
