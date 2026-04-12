@@ -16,6 +16,7 @@ import io.canvasmc.canvas.util.Json5SerializerImpl;
 import io.canvasmc.canvas.util.version.ApiClient;
 import io.canvasmc.canvas.util.version.CanvasVersionFetcher;
 import io.canvasmc.canvas.world.RegionizedRamBar;
+import io.canvasmc.canvas.world.RegionizedCpuBar;
 import io.canvasmc.canvas.world.RegionizedRegionBar;
 import io.canvasmc.canvas.world.RegionizedTpsBar;
 import io.canvasmc.canvas.world.entity.EntityCollisionMode;
@@ -545,6 +546,20 @@ public class Config {
         "Legacy tokens %util%, %chunks%, %players%, %entities% are also accepted and auto-converted."
     })
     public String regionBarFormat = RegionizedRegionBar.DEFAULT_FORMAT;
+
+    @Comment({
+        "Enables a regionized CPU-Bar implementation for Canvas",
+        "This function is per-player, with this as a global setting to disable it",
+        "To enable the cpu-bar per-player, use the '/cpubar' command"
+    })
+    public boolean enableCpuBar = true;
+
+    @Comment({
+        "MiniMessage-formatted line for the CPU bar.",
+        "Placeholders: <used>, <max>, <util>, <temp>.",
+        "Legacy tokens %used%, %max%, %util%, %temp% are also accepted and auto-converted."
+    })
+    public String cpuBarFormat = RegionizedCpuBar.DEFAULT_FORMAT;
 
     @NamespacedKeyValidator.NamespacedKey
     public String defaultRespawnDimensionKey = "minecraft:overworld";

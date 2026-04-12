@@ -3,6 +3,7 @@ package io.canvasmc.canvas.command;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import io.canvasmc.canvas.command.sub.RegionTickCommand;
+import io.canvasmc.canvas.command.sub.CpuBarCommand;
 import io.canvasmc.canvas.command.sub.RegionBarCommand;
 import io.canvasmc.canvas.command.sub.RamBarCommand;
 import io.canvasmc.canvas.command.sub.ReloadCommand;
@@ -42,6 +43,7 @@ public class RootCommandTree {
         INSTANCE.register(TpsBarCommand.class);
         INSTANCE.register(RamBarCommand.class);
         INSTANCE.register(RegionBarCommand.class);
+        INSTANCE.register(CpuBarCommand.class);
         INSTANCE.register(WorldDistanceCommand.class);
         INSTANCE.register(ReloadCommand.class);
         INSTANCE.register(RegionTickCommand.class);
