@@ -3,6 +3,7 @@ package io.canvasmc.canvas.command;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import io.canvasmc.canvas.command.sub.RegionTickCommand;
+import io.canvasmc.canvas.command.sub.RamBarCommand;
 import io.canvasmc.canvas.command.sub.ReloadCommand;
 import io.canvasmc.canvas.command.sub.SetMaxPlayersCommand;
 import io.canvasmc.canvas.command.sub.TpsBarCommand;
@@ -38,6 +39,7 @@ public class RootCommandTree {
         INSTANCE = new RootCommandTree();
         INSTANCE.register(SetMaxPlayersCommand.class);
         INSTANCE.register(TpsBarCommand.class);
+        INSTANCE.register(RamBarCommand.class);
         INSTANCE.register(WorldDistanceCommand.class);
         INSTANCE.register(ReloadCommand.class);
         INSTANCE.register(RegionTickCommand.class);
