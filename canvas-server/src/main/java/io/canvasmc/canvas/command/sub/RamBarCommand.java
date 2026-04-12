@@ -14,12 +14,13 @@ import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 
 import static net.minecraft.commands.Commands.argument;
+import static net.minecraft.commands.Commands.literal;
 
 @NullMarked
 public class RamBarCommand implements Command {
 
     private static void toggleRamBar(final CommandSourceStack source, final ServerPlayer player) {
-        final RegionizedRamBar.DisplayManager display = RegionizedRamBar.displayFor(player);
+        final RegionizedRamBar.DisplayManager display = player.canvas$ramBarDisplay;
         final RegionizedRamBar.Entry current = display.serializeDisplay();
         final RegionizedRamBar.Entry updated = new RegionizedRamBar.Entry(!current.enabled(), current.placement());
         display.updateFromEntry(updated);
@@ -35,7 +36,7 @@ public class RamBarCommand implements Command {
         final RegionizedRamBar.Placement newPlacement,
         final String argName
     ) {
-        final RegionizedRamBar.DisplayManager display = RegionizedRamBar.displayFor(player);
+        final RegionizedRamBar.DisplayManager display = player.canvas$ramBarDisplay;
         final RegionizedRamBar.Entry current = display.serializeDisplay();
         final RegionizedRamBar.Entry updated = new RegionizedRamBar.Entry(current.enabled(), newPlacement);
         display.updateFromEntry(updated);
@@ -76,6 +77,30 @@ public class RamBarCommand implements Command {
                 toggleRamBar(source, player);
                 return 1;
             })
+
+            .then(literal("toggle")
+                .executes(ctx -> {
+                    final CommandSourceStack source = ctx.getSource();
+                    final ServerPlayer player = source.getPlayer();
+
+                    if (player == null || !source.isPlayer()) {
+                        source.sendFailure(Component.literal("This command must be run by a valid player entity."));
+                        return 0;
+                    }
+
+                    toggleRamBar(source, player);
+                    return 1;
+                })
+                .then(argument("players", EntityArgument.players())
+                    .executes(ctx -> {
+                        final Collection<ServerPlayer> players = EntityArgument.getPlayers(ctx, "players");
+                        for (final ServerPlayer player : players) {
+                            toggleRamBar(ctx.getSource(), player);
+                        }
+                        return 1;
+                    })
+                )
+            )
 
             .then(argument("players", EntityArgument.players())
                 .executes(ctx -> {
