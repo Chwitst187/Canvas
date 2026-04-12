@@ -15,6 +15,7 @@ import io.canvasmc.canvas.tick.AffinitySchedulerThreadPool;
 import io.canvasmc.canvas.util.Json5SerializerImpl;
 import io.canvasmc.canvas.util.version.ApiClient;
 import io.canvasmc.canvas.util.version.CanvasVersionFetcher;
+import io.canvasmc.canvas.world.RegionizedRamBar;
 import io.canvasmc.canvas.world.RegionizedTpsBar;
 import io.canvasmc.canvas.world.entity.EntityCollisionMode;
 import io.papermc.paper.ServerBuildInfo;
@@ -528,6 +529,7 @@ public class Config {
         "Placeholders: <used>, <xmx>, <percent>.",
         "Legacy tokens %used%, %xmx%, %percent% are also accepted and auto-converted."
     })
+    public String ramBarFormat = RegionizedRamBar.DEFAULT_FORMAT;
 
     @NamespacedKeyValidator.NamespacedKey
     public String defaultRespawnDimensionKey = "minecraft:overworld";
