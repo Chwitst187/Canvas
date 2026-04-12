@@ -65,6 +65,12 @@ public class PaperPluginsCommand {
     private static final Component INFO_ICON_SERVER_PLUGIN = INFO_ICON_START.hoverEvent(SERVER_PLUGIN_INFO).clickEvent(ClickEvent.openUrl("https://docs.papermc.io/paper/adding-plugins"));
 
     private static final Type JAVA_PLUGIN_PROVIDER_TYPE = new TypeToken<PluginProvider<JavaPlugin>>() {}.getType();
+    private static final TextColor ENABLED_GRADIENT_START = TextColor.color(0xA907FF);
+    private static final TextColor ENABLED_GRADIENT_END = TextColor.color(0x6112A4);
+    private static final TextColor DISABLED_PLUGIN_COLOR = TextColor.color(0xFF0000);
+    private static final Component COMMAND_PREFIX = gradientText("CANVASMC", ENABLED_GRADIENT_START, ENABLED_GRADIENT_END)
+        .append(Component.text(" "))
+        .append(Component.text("» sen ", NamedTextColor.GRAY));
 
     public static LiteralCommandNode<CommandSourceStack> create() {
         final PaperPluginsCommand command = new PaperPluginsCommand();
@@ -111,12 +117,26 @@ public class PaperPluginsCommand {
         }
 
         final String name = provider.getMeta().getName();
-        final Component pluginName = Component.text(name, fromStatus(provider))
-            .clickEvent(ClickEvent.runCommand("/version " + name));
+        final Component pluginName = pluginNameComponent(provider, name).clickEvent(ClickEvent.runCommand("/version " + name));
 
         builder.append(pluginName);
 
         return builder.build();
+    }
+
+    private static Component pluginNameComponent(final PluginProvider<?> provider, final String name) {
+        if (provider instanceof final ProviderStatusHolder statusHolder && statusHolder.getLastProvidedStatus() != null
+            && statusHolder.getLastProvidedStatus() == ProviderStatus.INITIALIZED
+            && GenericTypeReflector.isSuperType(JAVA_PLUGIN_PROVIDER_TYPE, provider.getClass())) {
+            final Plugin plugin = Bukkit.getPluginManager().getPlugin(provider.getMeta().getName());
+            if (plugin != null && plugin.isEnabled()) {
+                return gradientText(name, ENABLED_GRADIENT_START, ENABLED_GRADIENT_END);
+            }
+
+            return Component.text(name, DISABLED_PLUGIN_COLOR);
+        }
+
+        return Component.text(name, fromStatus(provider));
     }
 
     private static Component header(final String header, final int color, final int count, final boolean showSize) {
@@ -149,10 +169,10 @@ public class PaperPluginsCommand {
                 final Plugin plugin = Bukkit.getPluginManager().getPlugin(provider.getMeta().getName());
                 // Plugin doesn't exist? Could be due to it being removed.
                 if (plugin == null) {
-                    return NamedTextColor.RED;
+                    return DISABLED_PLUGIN_COLOR;
                 }
 
-                return plugin.isEnabled() ? NamedTextColor.GREEN : NamedTextColor.RED;
+                return plugin.isEnabled() ? ENABLED_GRADIENT_START : DISABLED_PLUGIN_COLOR;
             }
 
             return switch (status) {
@@ -168,6 +188,31 @@ public class PaperPluginsCommand {
             // dependency issues or what not.
             return NamedTextColor.RED;
         }
+    }
+
+    private static Component withPrefix(final Component message) {
+        return COMMAND_PREFIX.append(message);
+    }
+
+    private static Component gradientText(final String text, final TextColor start, final TextColor end) {
+        if (text.isEmpty()) {
+            return Component.empty();
+        }
+
+        if (text.length() == 1) {
+            return Component.text(text, start);
+        }
+
+        final TextComponent.Builder builder = Component.text();
+        for (int i = 0; i < text.length(); i++) {
+            final double progress = (double) i / (text.length() - 1);
+            final int red = (int) Math.round(start.red() + (end.red() - start.red()) * progress);
+            final int green = (int) Math.round(start.green() + (end.green() - start.green()) * progress);
+            final int blue = (int) Math.round(start.blue() + (end.blue() - start.blue()) * progress);
+            builder.append(Component.text(String.valueOf(text.charAt(i)), TextColor.color(red, green, blue)));
+        }
+
+        return builder.build();
     }
 
     private int execute(CommandContext<CommandSourceStack> context) {
@@ -192,22 +237,22 @@ public class PaperPluginsCommand {
 
         final Component infoMessage = Component.text().append(INFO_ICON_SERVER_PLUGIN).append(Component.text("Server Plugins (%s):".formatted(sizePlugins), NamedTextColor.WHITE)).build();
 
-        sender.sendMessage(infoMessage);
+        sender.sendMessage(withPrefix(infoMessage));
 
         if (!paperPlugins.isEmpty()) {
-            sender.sendMessage(header("Paper Plugins", 0x0288D1, sizePaperPlugins, hasAllPluginTypes));
+            sender.sendMessage(withPrefix(header("Paper Plugins", 0x0288D1, sizePaperPlugins, hasAllPluginTypes)));
         }
 
         for (final Component component : formatProviders(paperPlugins)) {
-            sender.sendMessage(component);
+            sender.sendMessage(withPrefix(component));
         }
 
         if (!spigotPlugins.isEmpty()) {
-            sender.sendMessage(header("Bukkit Plugins", 0xED8106, sizeSpigotPlugins, hasAllPluginTypes));
+            sender.sendMessage(withPrefix(header("Bukkit Plugins", 0xED8106, sizeSpigotPlugins, hasAllPluginTypes)));
         }
 
         for (final Component component : formatProviders(spigotPlugins)) {
-            sender.sendMessage(component);
+            sender.sendMessage(withPrefix(component));
         }
 
         return Command.SINGLE_SUCCESS;
