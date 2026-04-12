@@ -68,9 +68,8 @@ public class PaperPluginsCommand {
     private static final TextColor ENABLED_GRADIENT_START = TextColor.color(0xA907FF);
     private static final TextColor ENABLED_GRADIENT_END = TextColor.color(0x6112A4);
     private static final TextColor DISABLED_PLUGIN_COLOR = TextColor.color(0xFF0000);
-    private static final Component COMMAND_PREFIX = gradientText("CANVASMC", ENABLED_GRADIENT_START, ENABLED_GRADIENT_END)
-        .append(Component.text(" "))
-        .append(Component.text("» sen ", NamedTextColor.GRAY));
+    // Prefix removed per request - previously showed a CANVASMC prefix with '» sen'
+    private static final Component COMMAND_PREFIX = Component.empty();
 
     public static LiteralCommandNode<CommandSourceStack> create() {
         final PaperPluginsCommand command = new PaperPluginsCommand();
