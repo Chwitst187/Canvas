@@ -13,6 +13,8 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.minecraft.network.protocol.game.ClientboundSetActionBarTextPacket;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.item.ItemEntity;
 import org.bukkit.craftbukkit.entity.CraftPlayer;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
@@ -24,7 +26,7 @@ public class RegionizedRegionBar {
     private static final String GRADIENT_GOOD = "<gradient:#55ff55:#00aa00><text></gradient>";
     private static final String GRADIENT_MEDIUM = "<gradient:#ffff55:#ffaa00><text></gradient>";
     private static final String GRADIENT_LOW = "<gradient:#ff5555:#aa0000><text></gradient>";
-    public static final String DEFAULT_FORMAT = "<gray>Util: <util> Chunks: <chunks> Players: <players> Entities: <entities>";
+    public static final String DEFAULT_FORMAT = "<gray>Util: <util> Chunks: <chunks> Players: <players> Entities: <entities> Items: <items>";
 
     private static final int PLAYERS_YELLOW = 100;
     private static final int PLAYERS_RED = 150;
@@ -34,6 +36,8 @@ public class RegionizedRegionBar {
     private static final double UTIL_RED = 90.0D;
     private static final int ENTITIES_YELLOW = 250;
     private static final int ENTITIES_RED = 450;
+    private static final int ITEMS_YELLOW = 250;
+    private static final int ITEMS_RED = 450;
 
     private final ThreadLocal<DecimalFormat> oneDecimalPlaces = ThreadLocal.withInitial(() -> new DecimalFormat("#,##0.0"));
     private final RegionizedWorldData worldData;
@@ -66,16 +70,27 @@ public class RegionizedRegionBar {
         final int chunks = this.worldData.getChunkCount();
         final int players = this.worldData.getPlayerCount();
         final int entities = this.worldData.getEntityCount();
+        final int items = this.countItemEntities();
 
         for (final ServerPlayer localPlayer : this.worldData.getLocalPlayers()) {
             final DisplayManager display = localPlayer.canvas$regionBarDisplay;
-            display.setDisplay(this.buildComponent(utilisationPercent, chunks, players, entities));
+            display.setDisplay(this.buildComponent(utilisationPercent, chunks, players, entities, items));
             display.updateBarColorAndProgress(utilisationPercent);
             display.tick();
         }
     }
 
-    private @NonNull Component buildComponent(final double utilisationPercent, final int chunks, final int players, final int entities) {
+    private int countItemEntities() {
+        int items = 0;
+        for (final Entity entity : this.worldData.getLoadedEntities()) {
+            if (entity instanceof ItemEntity && !entity.isRemoved()) {
+                items++;
+            }
+        }
+        return items;
+    }
+
+    private @NonNull Component buildComponent(final double utilisationPercent, final int chunks, final int players, final int entities, final int items) {
         final String configuredFormat = Config.INSTANCE.regionBarFormat;
         final String effectiveFormat = configuredFormat == null || configuredFormat.isBlank()
             ? DEFAULT_FORMAT
@@ -89,7 +104,8 @@ public class RegionizedRegionBar {
             net.kyori.adventure.text.minimessage.tag.resolver.Placeholder.component("util", this.getUtilComponent(utilisationPercent, formattedUtil, ratio)),
             net.kyori.adventure.text.minimessage.tag.resolver.Placeholder.component("chunks", this.getChunkComponent(chunks)),
             net.kyori.adventure.text.minimessage.tag.resolver.Placeholder.component("players", this.getPlayerComponent(players)),
-            net.kyori.adventure.text.minimessage.tag.resolver.Placeholder.component("entities", this.getEntityComponent(entities))
+            net.kyori.adventure.text.minimessage.tag.resolver.Placeholder.component("entities", this.getEntityComponent(entities)),
+            net.kyori.adventure.text.minimessage.tag.resolver.Placeholder.component("items", this.getItemComponent(items))
         );
     }
 
@@ -98,7 +114,8 @@ public class RegionizedRegionBar {
             .replace("%util%", "<util>")
             .replace("%chunks%", "<chunks>")
             .replace("%players%", "<players>")
-            .replace("%entities%", "<entities>");
+            .replace("%entities%", "<entities>")
+            .replace("%items%", "<items>");
     }
 
     private Component gradient(final String tpl, final String value) {
@@ -149,6 +166,17 @@ public class RegionizedRegionBar {
             return this.gradientComponent(0.90D, text);
         }
         if (entities >= ENTITIES_YELLOW) {
+            return this.gradientComponent(0.60D, text);
+        }
+        return this.gradientComponent(0.25D, text);
+    }
+
+    private @NotNull Component getItemComponent(final int items) {
+        final String text = items <= 0 ? "—" : String.valueOf(items);
+        if (items >= ITEMS_RED) {
+            return this.gradientComponent(0.90D, text);
+        }
+        if (items >= ITEMS_YELLOW) {
             return this.gradientComponent(0.60D, text);
         }
         return this.gradientComponent(0.25D, text);
