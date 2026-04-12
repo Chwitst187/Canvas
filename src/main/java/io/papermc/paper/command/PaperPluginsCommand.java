@@ -175,16 +175,16 @@ public class PaperPluginsCommand {
 
             return switch (status) {
                 case INITIALIZED -> NamedTextColor.GREEN;
-                case ERRORED -> NamedTextColor.RED;
+                case ERRORED -> DISABLED_PLUGIN_COLOR;
             };
         } else if (provider instanceof final PaperPluginParent.PaperServerPluginProvider serverPluginProvider && serverPluginProvider.shouldSkipCreation()) {
             // Paper plugins will be skipped if their provider is skipped due to their initializer failing.
             // Show them as red
-            return NamedTextColor.RED;
+            return DISABLED_PLUGIN_COLOR;
         } else {
             // Separated for future logic choice, but this indicated a provider that failed to load due to
             // dependency issues or what not.
-            return NamedTextColor.RED;
+            return DISABLED_PLUGIN_COLOR;
         }
     }
 
