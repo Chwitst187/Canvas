@@ -191,7 +191,7 @@ public class RegionizedCpuBar {
             return MINI_MESSAGE.deserialize("<gray>(n/a)");
         }
 
-        final String text = String.format(Locale.ROOT, "%.0fC", cpuTempC);
+        final String text = String.format(Locale.ROOT, "%.0f°", cpuTempC);
         final String tpl = cpuTempC < 70.0D ? GRADIENT_GOOD : (cpuTempC >= 85.0D ? GRADIENT_LOW : GRADIENT_MEDIUM);
         return Component.text()
             .append(MINI_MESSAGE.deserialize("<gray>(</gray>"))
