@@ -8,9 +8,6 @@ import io.papermc.paper.adventure.PaperAdventure;
 import io.papermc.paper.threadedregions.RegionizedWorldData;
 import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryUsage;
-import java.util.Collections;
-import java.util.Map;
-import java.util.WeakHashMap;
 import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
@@ -28,7 +25,6 @@ public class RegionizedRamBar {
     private static final String GRADIENT_MEDIUM = "<gradient:#ffff55:#ffaa00><text></gradient>";
     private static final String GRADIENT_LOW = "<gradient:#ff5555:#aa0000><text></gradient>";
     public static final String DEFAULT_FORMAT = "<gray>Mem: <used>/<xmx> (<percent>)";
-    private static final Map<ServerPlayer, DisplayManager> DISPLAY_MANAGERS = Collections.synchronizedMap(new WeakHashMap<>());
 
     private final RegionizedWorldData worldData;
     private final boolean canTick;
@@ -37,10 +33,6 @@ public class RegionizedRamBar {
     public RegionizedRamBar(final RegionizedWorldData worldData) {
         this.worldData = worldData;
         this.canTick = Config.INSTANCE.enableRamBar;
-    }
-
-    public static @NonNull DisplayManager displayFor(final ServerPlayer player) {
-        return DISPLAY_MANAGERS.computeIfAbsent(player, DisplayManager::createNew);
     }
 
     public void tick() {
@@ -61,7 +53,7 @@ public class RegionizedRamBar {
 
         for (final ServerPlayer localPlayer : this.worldData.getLocalPlayers()) {
             final Component textComponent = this.buildComponent(used, xmx, percent);
-            final DisplayManager display = displayFor(localPlayer);
+            final DisplayManager display = localPlayer.canvas$ramBarDisplay;
             display.setDisplay(textComponent);
             display.updateBarColorAndProgress(percent);
             display.tick();
