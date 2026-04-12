@@ -139,7 +139,7 @@ public class RegionizedRamBar {
                         this.display,
                         0.0F,
                         BossBar.Color.PURPLE,
-                        BossBar.Overlay.NOTCHED_20
+                        BossBar.Overlay.PROGRESS
                     );
 
                 private volatile boolean enabled = false;
