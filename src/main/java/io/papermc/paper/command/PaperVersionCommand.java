@@ -229,23 +229,7 @@ public class PaperVersionCommand {
             );
         }
 
-        final int foliaIndex = text.indexOf("Folia");
-        if (foliaIndex == -1) {
-            return Component.text(text, NamedTextColor.WHITE);
-        }
-
-        final String before = text.substring(0, foliaIndex);
-        final String after = text.substring(foliaIndex + 5);
-
-        return Component.textOfChildren(
-            Component.text(before, NamedTextColor.WHITE),
-            Component.text("F", TextColor.color(0xff0000)).decorate(TextDecoration.BOLD),
-            Component.text("o", TextColor.color(0xff1f00)).decorate(TextDecoration.BOLD),
-            Component.text("l", TextColor.color(0xff3f00)).decorate(TextDecoration.BOLD),
-            Component.text("i", TextColor.color(0xff5e00)).decorate(TextDecoration.BOLD),
-            Component.text("a", TextColor.color(0xff7d00)).decorate(TextDecoration.BOLD),
-            Component.text(after, NamedTextColor.WHITE)
-        );
+        return Component.text(text, NamedTextColor.WHITE);
     }
 
     private static Component withPrefixPerLine(final Component message) {
