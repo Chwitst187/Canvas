@@ -170,7 +170,7 @@ public class RegionizedRegionBar {
                         this.display,
                         0.0F,
                         BossBar.Color.GREEN,
-                        BossBar.Overlay.NOTCHED_20
+                        BossBar.Overlay.PROGRESS
                     );
 
                 private volatile boolean enabled = false;
