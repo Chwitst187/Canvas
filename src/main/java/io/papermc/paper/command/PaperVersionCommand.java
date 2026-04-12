@@ -47,13 +47,16 @@ public class PaperVersionCommand {
     private static final Component FETCHING = Component.text("Checking version, please wait...", NamedTextColor.WHITE, TextDecoration.ITALIC);
 
     private static final Component PREFIX = Component.empty()
-        .append(Component.text("F", TextColor.color(0xff0000)).decorate(TextDecoration.BOLD))
-        .append(Component.text("o", TextColor.color(0xff1f00)).decorate(TextDecoration.BOLD))
-        .append(Component.text("l", TextColor.color(0xff3f00)).decorate(TextDecoration.BOLD))
-        .append(Component.text("i", TextColor.color(0xff5e00)).decorate(TextDecoration.BOLD))
-        .append(Component.text("a", TextColor.color(0xff7d00)).decorate(TextDecoration.BOLD))
-        .append(Component.text("  "))
-        .append(Component.text(">", NamedTextColor.GRAY))
+        .append(Component.text("C", TextColor.color(0xa907ff)).decorate(TextDecoration.BOLD))
+        .append(Component.text("A", TextColor.color(0x9f09f2)).decorate(TextDecoration.BOLD))
+        .append(Component.text("N", TextColor.color(0x940ae5)).decorate(TextDecoration.BOLD))
+        .append(Component.text("V", TextColor.color(0x8a0cd8)).decorate(TextDecoration.BOLD))
+        .append(Component.text("A", TextColor.color(0x800dcb)).decorate(TextDecoration.BOLD))
+        .append(Component.text("S", TextColor.color(0x760fbe)).decorate(TextDecoration.BOLD))
+        .append(Component.text("M", TextColor.color(0x6b10b1)).decorate(TextDecoration.BOLD))
+        .append(Component.text("C", TextColor.color(0x6112a4)).decorate(TextDecoration.BOLD))
+        .append(Component.text(" "))
+        .append(Component.text("»", NamedTextColor.GRAY))
         .append(Component.text(" "));
 
     private final VersionFetcher versionFetcher = CraftMagicNumbers.INSTANCE.getVersionFetcher();
