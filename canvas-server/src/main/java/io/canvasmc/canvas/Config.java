@@ -15,7 +15,6 @@ import io.canvasmc.canvas.tick.AffinitySchedulerThreadPool;
 import io.canvasmc.canvas.util.Json5SerializerImpl;
 import io.canvasmc.canvas.util.version.ApiClient;
 import io.canvasmc.canvas.util.version.CanvasVersionFetcher;
-import io.canvasmc.canvas.world.RegionizedRamBar;
 import io.canvasmc.canvas.world.RegionizedTpsBar;
 import io.canvasmc.canvas.world.entity.EntityCollisionMode;
 import io.papermc.paper.ServerBuildInfo;
@@ -529,20 +528,7 @@ public class Config {
         "Placeholders: <used>, <xmx>, <percent>.",
         "Legacy tokens %used%, %xmx%, %percent% are also accepted and auto-converted."
     })
-    public String ramBarFormat = RegionizedRamBar.DEFAULT_FORMAT;
 
-    @Comment(value = {
-        "The default respawn dimension for the server.",
-        "This can assist for servers that need this changed to a different world",
-        "due to setup reasoning, like needing to send the players to the spawn world",
-        "or the wilderness world, etc.",
-        "This needs a NamespacedKey string pattern, like 'namespace:key' that points",
-        "to the dimension you want to use. The default is 'minecraft:overworld'",
-        "",
-        "This also applies to the end portal and nether portal, in replacement of the overworld",
-        "For example, if you set this to 'minecraft:the_nether', all entities entering the",
-        "end portal from the end will respawn in the nether rather than the overworld"
-    })
     @NamespacedKeyValidator.NamespacedKey
     public String defaultRespawnDimensionKey = "minecraft:overworld";
 
