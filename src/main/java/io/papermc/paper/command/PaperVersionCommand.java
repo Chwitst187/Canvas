@@ -20,6 +20,7 @@ import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
+import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import net.minecraft.server.MinecraftServer;
 import org.bukkit.Bukkit;
@@ -44,6 +45,16 @@ public class PaperVersionCommand {
     );
     private static final Component FAILED_TO_FETCH = Component.text("Could not fetch version information!", NamedTextColor.RED);
     private static final Component FETCHING = Component.text("Checking version, please wait...", NamedTextColor.WHITE, TextDecoration.ITALIC);
+
+    private static final Component PREFIX = Component.empty()
+        .append(Component.text("F", TextColor.color(0xff0000)).decorate(TextDecoration.BOLD))
+        .append(Component.text("o", TextColor.color(0xff1f00)).decorate(TextDecoration.BOLD))
+        .append(Component.text("l", TextColor.color(0xff3f00)).decorate(TextDecoration.BOLD))
+        .append(Component.text("i", TextColor.color(0xff5e00)).decorate(TextDecoration.BOLD))
+        .append(Component.text("a", TextColor.color(0xff7d00)).decorate(TextDecoration.BOLD))
+        .append(Component.text("  "))
+        .append(Component.text(">", NamedTextColor.GRAY))
+        .append(Component.text(" "));
 
     private final VersionFetcher versionFetcher = CraftMagicNumbers.INSTANCE.getVersionFetcher();
     private CompletableFuture<ComputedVersion> computedVersion = CompletableFuture.completedFuture(new ComputedVersion(Component.empty(), -1)); // Precompute-- someday move that stuff out of bukkit
@@ -75,7 +86,7 @@ public class PaperVersionCommand {
         if (plugin != null) {
             this.sendPluginInfo(plugin, sender);
         } else {
-            sender.sendMessage(NOT_RUNNING);
+            sender.sendMessage(withPrefixPerLine(NOT_RUNNING));
         }
 
         return Command.SINGLE_SUCCESS;
@@ -122,7 +133,7 @@ public class PaperVersionCommand {
         if (!meta.getContributors().isEmpty()) {
             builder.appendNewline().append(Component.text("Contributors: ").append(formatNameList(meta.getContributors())));
         }
-        sender.sendMessage(builder.build());
+        sender.sendMessage(withPrefixPerLine(builder.build()));
     }
 
     private static Component formatNameList(final List<String> names) {
@@ -137,14 +148,14 @@ public class PaperVersionCommand {
     private void sendVersion(final CommandSender sender) {
         final CompletableFuture<ComputedVersion> version = getVersionOrFetch();
         if (!version.isDone()) {
-            sender.sendMessage(FETCHING);
+            sender.sendMessage(withPrefixPerLine(FETCHING));
         }
 
         version.whenComplete((computedVersion, throwable) -> {
             if (computedVersion != null) {
-                sender.sendMessage(computedVersion.message);
+                sender.sendMessage(withPrefixPerLine(computedVersion.message));
             } else if (throwable != null) {
-                sender.sendMessage(FAILED_TO_FETCH);
+                sender.sendMessage(withPrefixPerLine(FAILED_TO_FETCH));
                 MinecraftServer.LOGGER.warn("Could not fetch version information!", throwable);
             }
         });
@@ -165,7 +176,7 @@ public class PaperVersionCommand {
     private CompletableFuture<ComputedVersion> fetchVersionMessage() {
        return CompletableFuture.supplyAsync(() -> {
            final Component message = Component.textOfChildren(
-               Component.text(Bukkit.getVersionMessage(), NamedTextColor.WHITE),
+               colorizeVersionMessage(Bukkit.getVersionMessage()),
                Component.newline(),
                this.versionFetcher.getVersionMessage()
            );
@@ -176,6 +187,39 @@ public class PaperVersionCommand {
                System.currentTimeMillis()
            );
        });
+    }
+
+    private static Component colorizeVersionMessage(final String text) {
+        final int foliaIndex = text.indexOf("Folia");
+        if (foliaIndex == -1) {
+            return Component.text(text, NamedTextColor.WHITE);
+        }
+
+        final String before = text.substring(0, foliaIndex);
+        final String after = text.substring(foliaIndex + 5);
+
+        return Component.textOfChildren(
+            Component.text(before, NamedTextColor.WHITE),
+            Component.text("F", TextColor.color(0xff0000)).decorate(TextDecoration.BOLD),
+            Component.text("o", TextColor.color(0xff1f00)).decorate(TextDecoration.BOLD),
+            Component.text("l", TextColor.color(0xff3f00)).decorate(TextDecoration.BOLD),
+            Component.text("i", TextColor.color(0xff5e00)).decorate(TextDecoration.BOLD),
+            Component.text("a", TextColor.color(0xff7d00)).decorate(TextDecoration.BOLD),
+            Component.text(after, NamedTextColor.WHITE)
+        );
+    }
+
+    private static Component withPrefixPerLine(final Component message) {
+        final String plain = PlainTextComponentSerializer.plainText().serialize(message);
+        final String[] lines = plain.split("\\R", -1);
+        Component result = Component.empty();
+        for (int i = 0; i < lines.length; i++) {
+            result = result.append(Component.textOfChildren(PREFIX, colorizeVersionMessage(lines[i])));
+            if (i < lines.length - 1) {
+                result = result.append(Component.newline());
+            }
+        }
+        return result;
     }
 
     record ComputedVersion(Component message, long computedTime) {
