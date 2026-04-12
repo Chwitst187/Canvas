@@ -193,6 +193,42 @@ public class PaperVersionCommand {
     }
 
     private static Component colorizeVersionMessage(final String text) {
+        final int canvasMcIndex = text.indexOf("CanvasMC");
+        if (canvasMcIndex != -1) {
+            final String before = text.substring(0, canvasMcIndex);
+            final String after = text.substring(canvasMcIndex + 8);
+
+            return Component.textOfChildren(
+                Component.text(before, NamedTextColor.WHITE),
+                Component.text("C", TextColor.color(0xa907ff)).decorate(TextDecoration.BOLD),
+                Component.text("A", TextColor.color(0x9f09f2)).decorate(TextDecoration.BOLD),
+                Component.text("N", TextColor.color(0x940ae5)).decorate(TextDecoration.BOLD),
+                Component.text("V", TextColor.color(0x8a0cd8)).decorate(TextDecoration.BOLD),
+                Component.text("A", TextColor.color(0x800dcb)).decorate(TextDecoration.BOLD),
+                Component.text("S", TextColor.color(0x760fbe)).decorate(TextDecoration.BOLD),
+                Component.text("M", TextColor.color(0x6b10b1)).decorate(TextDecoration.BOLD),
+                Component.text("C", TextColor.color(0x6112a4)).decorate(TextDecoration.BOLD),
+                Component.text(after, NamedTextColor.WHITE)
+            );
+        }
+
+        final int canvasIndex = text.indexOf("Canvas");
+        if (canvasIndex != -1) {
+            final String before = text.substring(0, canvasIndex);
+            final String after = text.substring(canvasIndex + 6);
+
+            return Component.textOfChildren(
+                Component.text(before, NamedTextColor.WHITE),
+                Component.text("C", TextColor.color(0xa907ff)).decorate(TextDecoration.BOLD),
+                Component.text("A", TextColor.color(0x9f09f2)).decorate(TextDecoration.BOLD),
+                Component.text("N", TextColor.color(0x940ae5)).decorate(TextDecoration.BOLD),
+                Component.text("V", TextColor.color(0x8a0cd8)).decorate(TextDecoration.BOLD),
+                Component.text("A", TextColor.color(0x800dcb)).decorate(TextDecoration.BOLD),
+                Component.text("S", TextColor.color(0x760fbe)).decorate(TextDecoration.BOLD),
+                Component.text(after, NamedTextColor.WHITE)
+            );
+        }
+
         final int foliaIndex = text.indexOf("Folia");
         if (foliaIndex == -1) {
             return Component.text(text, NamedTextColor.WHITE);
