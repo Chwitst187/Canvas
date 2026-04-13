@@ -69,8 +69,9 @@ public class RegionizedRegionBar {
         final double utilisationPercent = utilisation * 100.0D;
         final int chunks = this.worldData.getChunkCount();
         final int players = this.worldData.getPlayerCount();
-        final int entities = this.worldData.getEntityCount();
-        final int items = this.countItemEntities();
+        final EntityCounts entityCounts = this.countEntities();
+        final int entities = entityCounts.entities();
+        final int items = entityCounts.items();
 
         for (final ServerPlayer localPlayer : this.worldData.getLocalPlayers()) {
             final DisplayManager display = localPlayer.canvas$regionBarDisplay;
@@ -80,14 +81,21 @@ public class RegionizedRegionBar {
         }
     }
 
-    private int countItemEntities() {
+    private EntityCounts countEntities() {
+        int entities = 0;
         int items = 0;
         for (final Entity entity : this.worldData.getLoadedEntities()) {
-            if (entity instanceof ItemEntity && !entity.isRemoved()) {
-                items++;
+            if (!entity.isRemoved()) {
+                entities++;
+                if (entity instanceof ItemEntity) {
+                    items++;
+                }
             }
         }
-        return items;
+        return new EntityCounts(entities, items);
+    }
+
+    private record EntityCounts(int entities, int items) {
     }
 
     private @NonNull Component buildComponent(final double utilisationPercent, final int chunks, final int players, final int entities, final int items) {
