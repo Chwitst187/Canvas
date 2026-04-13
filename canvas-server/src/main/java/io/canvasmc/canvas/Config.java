@@ -542,8 +542,8 @@ public class Config {
 
     @Comment({
         "MiniMessage-formatted line for the region bar.",
-        "Placeholders: <util>, <chunks>, <players>, <entities>, <items>.",
-        "Legacy tokens %util%, %chunks%, %players%, %entities%, %items% are also accepted and auto-converted."
+        "Placeholders: <util>, <chunks>, <players>, <entities>.",
+        "Legacy tokens %util%, %chunks%, %players%, %entities% are also accepted and auto-converted."
     })
     public String regionBarFormat = RegionizedRegionBar.DEFAULT_FORMAT;
 
