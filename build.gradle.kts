@@ -2,6 +2,7 @@ import org.gradle.api.tasks.testing.logging.TestExceptionFormat
 import org.gradle.api.tasks.testing.logging.TestLogEvent
 import io.papermc.paperweight.tasks.RebuildGitPatches
 import io.papermc.paperweight.tasks.RebuildBaseGitPatches
+import java.io.File
 
 plugins {
     java
@@ -113,6 +114,44 @@ subprojects {
 // patching scripts
 tasks.register("fixupMinecraftFilePatches") {
     dependsOn(":canvas-server:fixupMinecraftSourcePatches")
+}
+
+tasks.register("rebuildMinecraftSinglePatch") {
+    group = "patching"
+    description = "Rebuilds minecraft source patches, then keeps only one target patch file changed via -Ppatch=<relative patch path>."
+    dependsOn("fixupMinecraftFilePatches", "rebuildMinecraftFilePatches")
+
+    doLast {
+        val patchProperty = project.findProperty("patch")?.toString()?.trim()
+            ?: throw GradleException("Missing -Ppatch=<relative path>, e.g. -Ppatch=net/minecraft/server/level/ServerEntity.java.patch")
+
+        val sourcesPatchRoot = rootProject.file("canvas-server/minecraft-patches/sources").canonicalFile
+        val normalizedPatch = patchProperty.removePrefix("/").replace('\\', '/')
+        val targetPatch = File(sourcesPatchRoot, normalizedPatch).canonicalFile
+
+        if (!targetPatch.path.startsWith(sourcesPatchRoot.path + File.separator)) {
+            throw GradleException("Patch path must stay inside canvas-server/minecraft-patches/sources")
+        }
+        if (!targetPatch.exists()) {
+            throw GradleException("Patch file does not exist: ${targetPatch.relativeTo(rootDir)}")
+        }
+
+        val allPatchFiles = fileTree(sourcesPatchRoot) {
+            include("**/*.patch")
+        }.files
+
+        val filesToRestore = allPatchFiles
+            .filter { it.canonicalFile != targetPatch }
+            .map { it.relativeTo(rootDir).invariantSeparatorsPath }
+
+        if (filesToRestore.isNotEmpty()) {
+            exec {
+                commandLine(listOf("git", "checkout", "--") + filesToRestore)
+            }
+        }
+
+        logger.lifecycle("Kept only target minecraft patch for update: ${targetPatch.relativeTo(rootDir).invariantSeparatorsPath}")
+    }
 }
 
 // TODO: remove me in 26.1
