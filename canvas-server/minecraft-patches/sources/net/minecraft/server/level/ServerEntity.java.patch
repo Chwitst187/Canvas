@@ -89,7 +89,8 @@
 +                               This filter helps keep unneeded packets reduced, but also ensures that we keep smooth visual gameplay
 +                            */
 +                            if (
-+                                (this.entity instanceof net.minecraft.world.entity.item.ItemEntity && flag1) ||
++                                (this.entity instanceof net.minecraft.world.entity.item.ItemEntity
++                                    && io.canvasmc.canvas.network.ItemMotionPacketFilter.shouldSendItemMotionPacket(d, flag1, this.tickCount)) ||
 +                                this.entity instanceof net.minecraft.world.entity.projectile.EyeOfEnder ||
 +                                this.entity instanceof net.minecraft.world.entity.animal.squid.Squid ||
 +                                this.entity instanceof net.minecraft.world.entity.projectile.ShulkerBullet
