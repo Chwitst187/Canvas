@@ -145,8 +145,8 @@ tasks.register("rebuildMinecraftSinglePatch") {
             .map { it.relativeTo(rootDir).invariantSeparatorsPath }
 
         if (filesToRestore.isNotEmpty()) {
-            exec {
-                commandLine(listOf("git", "checkout", "--") + filesToRestore)
+            project.exec {
+                commandLine("git", "checkout", "--", *filesToRestore.toTypedArray())
             }
         }
 
