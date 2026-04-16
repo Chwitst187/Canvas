@@ -5,35 +5,8 @@ pluginManagement {
         mavenLocal()
         gradlePluginPortal()
         maven {
-            name = "canvasmcReleases"
+            name = "canvasmc"
             url = uri("https://maven.canvasmc.io/releases")
-        }
-        maven {
-            name = "canvasmcSnapshots"
-            url = uri("https://maven.canvasmc.io/snapshots")
-        }
-        // Some setups only expose Canvas artifacts via Nexus-style /repository/* paths.
-        maven {
-            name = "canvasmcNexusReleases"
-            url = uri("https://maven.canvasmc.io/repository/releases")
-        }
-        maven {
-            name = "canvasmcNexusSnapshots"
-            url = uri("https://maven.canvasmc.io/repository/snapshots")
-        }
-    }
-
-    resolutionStrategy {
-        val weaverPatcherModule = providers.gradleProperty("weaverPatcherModule").orNull
-        val weaverCoreModule = providers.gradleProperty("weaverCoreModule").orNull
-
-        eachPlugin {
-            when (requested.id.id) {
-                // Optional fallback: allows resolving plugin IDs from direct module coordinates.
-                // Example: -PweaverPatcherModule=io.canvasmc.weaver:weaver-patcher
-                "io.canvasmc.weaver.patcher" -> weaverPatcherModule?.let { useModule("$it:${requested.version}") }
-                "io.canvasmc.weaver.core" -> weaverCoreModule?.let { useModule("$it:${requested.version}") }
-            }
         }
     }
 }
