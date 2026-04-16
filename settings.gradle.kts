@@ -5,8 +5,12 @@ pluginManagement {
         mavenLocal()
         gradlePluginPortal()
         maven {
-            name = "canvasmc"
+            name = "canvasmcReleases"
             url = uri("https://maven.canvasmc.io/releases")
+        }
+        maven {
+            name = "canvasmcSnapshots"
+            url = uri("https://maven.canvasmc.io/snapshots")
         }
     }
 }
