@@ -1,8 +1,6 @@
 import org.gradle.api.tasks.testing.logging.TestExceptionFormat
 import org.gradle.api.tasks.testing.logging.TestLogEvent
-import io.papermc.paperweight.tasks.RebuildGitPatches
-import io.papermc.paperweight.tasks.RebuildBaseGitPatches
-import java.io.File
+import io.papermc.paperweight.core.tasks.patchroulette.AbstractPatchRouletteTask
 
 plugins {
     java
@@ -56,22 +54,21 @@ subprojects {
         maven(paperMavenPublicUrl)
     }
 
-    tasks.withType<AbstractArchiveTask>().configureEach {
-        isPreserveFileTimestamps = false
-        isReproducibleFileOrder = true
-    }
     tasks.withType<JavaCompile>().configureEach {
         options.encoding = Charsets.UTF_8.name()
         options.release = 21
         options.isFork = true
         options.compilerArgs.addAll(listOf("-Xlint:-deprecation", "-Xlint:-removal"))
     }
+
     tasks.withType<Javadoc>().configureEach {
         options.encoding = Charsets.UTF_8.name()
     }
+
     tasks.withType<ProcessResources>().configureEach {
         filteringCharset = Charsets.UTF_8.name()
     }
+
     tasks.withType<Test>().configureEach {
         testLogging {
             showStackTraces = true
@@ -79,6 +76,11 @@ subprojects {
             events(TestLogEvent.STANDARD_OUT)
         }
     }
+
+    tasks.withType<AbstractPatchRouletteTask>().configureEach {
+        endpoint = "https://patch-roulette.canvasmc.io/api"
+    }
+
     extensions.configure<PublishingExtension> {
         repositories {
             maven("https://maven.canvasmc.io/snapshots") {
@@ -116,50 +118,7 @@ tasks.register("fixupMinecraftFilePatches") {
     dependsOn(":canvas-server:fixupMinecraftSourcePatches")
 }
 
-tasks.register("rebuildMinecraftSinglePatch") {
-    group = "patching"
-    description = "Rebuilds minecraft source patches, then keeps only one target patch file changed via -Ppatch=<relative patch path>."
-    dependsOn("fixupMinecraftFilePatches", "rebuildMinecraftFilePatches")
-
-    doLast {
-        val patchProperty = project.findProperty("patch")?.toString()?.trim()
-            ?: throw GradleException("Missing -Ppatch=<relative path>, e.g. -Ppatch=net/minecraft/server/level/ServerEntity.java.patch")
-
-        val sourcesPatchRoot = rootProject.file("canvas-server/minecraft-patches/sources").canonicalFile
-        val normalizedPatch = patchProperty.removePrefix("/").replace('\\', '/')
-        val targetPatch = File(sourcesPatchRoot, normalizedPatch).canonicalFile
-
-        if (!targetPatch.path.startsWith(sourcesPatchRoot.path + File.separator)) {
-            throw GradleException("Patch path must stay inside canvas-server/minecraft-patches/sources")
-        }
-        if (!targetPatch.exists()) {
-            throw GradleException("Patch file does not exist: ${targetPatch.relativeTo(rootDir)}")
-        }
-
-        val allPatchFiles = fileTree(sourcesPatchRoot) {
-            include("**/*.patch")
-        }.files
-
-        val filesToRestore = allPatchFiles
-            .filter { it.canonicalFile != targetPatch }
-            .map { it.relativeTo(rootDir).invariantSeparatorsPath }
-
-        if (filesToRestore.isNotEmpty()) {
-            providers.exec {
-                commandLine("git", "checkout", "--", *filesToRestore.toTypedArray())
-            }
-        }
-
-        logger.lifecycle("Kept only target minecraft patch for update: ${targetPatch.relativeTo(rootDir).invariantSeparatorsPath}")
-    }
-}
-
 // TODO: remove me in 26.1
 tasks.register("createPublisherJar") {
     dependsOn(":canvas-server:createMojmapPublisherJar")
-}
-
-// TODO: remove me in 26.1
-tasks.register("cleanCreatePublisherJar") {
-    dependsOn(":canvas-server:cleanCreateMojmapPublisherJar")
 }
