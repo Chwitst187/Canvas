@@ -46,7 +46,8 @@
 +                        }
 +                    }
 +
-+                    if (io.canvasmc.canvas.Config.INSTANCE.networking.reduceUselessMovePackets
++                    if ((io.canvasmc.canvas.Config.INSTANCE.networking.reduceUselessMovePackets
++                        || this.entity instanceof net.minecraft.world.entity.item.ItemEntity)
 +                        && canvas$isUselessMoveEntityPacket(packet)) {
 +                        packet = null;
 +                    }
@@ -69,7 +70,7 @@
                                  );
 -                        } else {
 +                        // Canvas start - filter ClientboundSetEntityMotionPacket
-+                        } else if (!io.canvasmc.canvas.Config.INSTANCE.networking.filterClientboundSetEntityMotionPacket) {
++                        } else if (!this.canvas$shouldFilterMotionPacket()) {
 +                            // sends all of them if not filtering
                              this.synchronizer.sendToTrackingPlayers(new ClientboundSetEntityMotionPacket(this.entity.getId(), this.lastSentMovement));
 +                        } else {
@@ -94,7 +95,7 @@
 +                               This filter helps keep unneeded packets reduced, but also ensures that we keep smooth visual gameplay
 +                            */
 +                            if (
-+                                (this.entity instanceof net.minecraft.world.entity.item.ItemEntity && flag1) ||
++                                (this.entity instanceof net.minecraft.world.entity.item.ItemEntity itemEntity && this.canvas$shouldSendItemMotionPacket(itemEntity, flag1)) ||
 +                                this.entity instanceof net.minecraft.world.entity.projectile.EyeOfEnder ||
 +                                this.entity instanceof net.minecraft.world.entity.animal.squid.Squid ||
 +                                this.entity instanceof net.minecraft.world.entity.projectile.ShulkerBullet
@@ -131,7 +132,30 @@
 +        final double deltaY = deltaMovement.y - this.lastSentMovement.y;
 +        final double deltaZ = deltaMovement.z - this.lastSentMovement.z;
 +        final double d = deltaX * deltaX + deltaY * deltaY + deltaZ * deltaZ;
++
++        if (this.entity instanceof net.minecraft.world.entity.item.ItemEntity) {
++            return d > 1.0E-6 || (d > 0.0 && deltaMovement.lengthSqr() == 0.0);
++        }
++
 +        return d > 1.0E-7 || (d > 0.0 && deltaMovement.lengthSqr() == 0.0);
++    }
++
++    private boolean canvas$shouldFilterMotionPacket() {
++        return io.canvasmc.canvas.Config.INSTANCE.networking.filterClientboundSetEntityMotionPacket
++            || this.entity instanceof net.minecraft.world.entity.item.ItemEntity;
++    }
++
++    private boolean canvas$shouldSendItemMotionPacket(final net.minecraft.world.entity.item.ItemEntity itemEntity, final boolean movedThisTick) {
++        if (!movedThisTick) {
++            return false;
++        }
++
++        final Vec3 deltaMovement = itemEntity.getDeltaMovement();
++        if (itemEntity.onGround()) {
++            return deltaMovement.horizontalDistanceSqr() > 1.0E-6 || Math.abs(deltaMovement.y) > 1.0E-4;
++        }
++
++        return deltaMovement.lengthSqr() > 1.0E-6;
 +    }
 +    // Canvas end - reduce useless move packets
  
