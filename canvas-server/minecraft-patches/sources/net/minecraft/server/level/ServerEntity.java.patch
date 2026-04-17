@@ -145,17 +145,35 @@
 +            || this.entity instanceof net.minecraft.world.entity.item.ItemEntity;
 +    }
 +
++    private static final int CANVAS_ITEM_MOTION_PACKET_INTERVAL = 3;
++
 +    private boolean canvas$shouldSendItemMotionPacket(final net.minecraft.world.entity.item.ItemEntity itemEntity, final boolean movedThisTick) {
 +        if (!movedThisTick) {
 +            return false;
 +        }
 +
 +        final Vec3 deltaMovement = itemEntity.getDeltaMovement();
-+        if (itemEntity.onGround()) {
-+            return deltaMovement.horizontalDistanceSqr() > 1.0E-6 || Math.abs(deltaMovement.y) > 1.0E-4;
++        final double lenSqr = deltaMovement.lengthSqr();
++
++        // Ignore tiny jitter and avoid high-frequency velocity spam for floating items.
++        if (lenSqr <= 2.5E-6) {
++            return false;
 +        }
 +
-+        return deltaMovement.lengthSqr() > 1.0E-6;
++        final double dx = deltaMovement.x - this.lastSentMovement.x;
++        final double dy = deltaMovement.y - this.lastSentMovement.y;
++        final double dz = deltaMovement.z - this.lastSentMovement.z;
++        final double changeSqr = dx * dx + dy * dy + dz * dz;
++
++        if ((itemEntity.tickCount % CANVAS_ITEM_MOTION_PACKET_INTERVAL) != 0 && changeSqr <= 1.0E-5) {
++            return false;
++        }
++
++        if (itemEntity.onGround()) {
++            return deltaMovement.horizontalDistanceSqr() > 2.5E-6 || Math.abs(deltaMovement.y) > 2.0E-4;
++        }
++
++        return lenSqr > 2.5E-6;
 +    }
 +    // Canvas end - reduce useless move packets
  
