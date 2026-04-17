@@ -54,7 +54,12 @@
                  }
  
 -                if (this.entity.needsSync || this.trackDelta || this.entity instanceof LivingEntity && ((LivingEntity)this.entity).isFallFlying()) {
-+                if (this.entity.needsSync || this.trackDelta || this.entity instanceof LivingEntity && ((LivingEntity)this.entity).isFallFlying() && this.entity.getDeltaMovement() != this.lastSentMovement) { // Canvas - reduce useless move packets
++                // Canvas start - reduce useless move packets
++                final boolean forceDeltaSync = this.entity.needsSync
++                    || this.trackDelta
++                    || this.entity instanceof LivingEntity livingEntity && livingEntity.isFallFlying();
++                if (forceDeltaSync && this.canvas$hasMeaningfulDeltaMovementChange()) {
++                // Canvas end - reduce useless move packets
                      Vec3 deltaMovement = this.entity.getDeltaMovement();
                      double d = deltaMovement.distanceToSqr(this.lastSentMovement);
                      if (d > 1.0E-7 || d > 0.0 && deltaMovement.lengthSqr() == 0.0) {
@@ -118,6 +123,15 @@
 +                moveEntityPacket.getYRot() == 0 && moveEntityPacket.getXRot() == 0;
 +            default -> false;
 +        };
++    }
++
++    private boolean canvas$hasMeaningfulDeltaMovementChange() {
++        final Vec3 deltaMovement = this.entity.getDeltaMovement();
++        final double deltaX = deltaMovement.x - this.lastSentMovement.x;
++        final double deltaY = deltaMovement.y - this.lastSentMovement.y;
++        final double deltaZ = deltaMovement.z - this.lastSentMovement.z;
++        final double d = deltaX * deltaX + deltaY * deltaY + deltaZ * deltaZ;
++        return d > 1.0E-7 || (d > 0.0 && deltaMovement.lengthSqr() == 0.0);
 +    }
 +    // Canvas end - reduce useless move packets
  
