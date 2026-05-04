@@ -5,7 +5,7 @@ Subject: [PATCH] Implement Teleport Portal and Respawn Events
 
 
 diff --git a/net/minecraft/server/level/ServerPlayer.java b/net/minecraft/server/level/ServerPlayer.java
-index 8b013e8dc92ddb0d8f42a5cfe3c9b9e92e4c1722..24f134768bfa1dcbc3f6b19006b32761ebcf9c19 100644
+index 8b013e8dc92ddb0d8f42a5cfe3c9b9e92e4c1722..b4f9a932f6c4ab46f568909ca64bdadbef014c9f 100644
 --- a/net/minecraft/server/level/ServerPlayer.java
 +++ b/net/minecraft/server/level/ServerPlayer.java
 @@ -1728,14 +1728,29 @@ public class ServerPlayer extends Player implements ca.spottedleaf.moonrise.patc
@@ -51,8 +51,21 @@ index 8b013e8dc92ddb0d8f42a5cfe3c9b9e92e4c1722..24f134768bfa1dcbc3f6b19006b32761
                  TELEPORT_FLAG_LOAD_CHUNK | TELEPORT_FLAGS_PLAYER_RESPAWN,
                  passengerTree, // note: we expect this to just be the player, no passengers
                  (entity) -> {
-@@ -1767,6 +1782,22 @@ public class ServerPlayer extends Player implements ca.spottedleaf.moonrise.patc
+@@ -1765,8 +1780,35 @@ public class ServerPlayer extends Player implements ca.spottedleaf.moonrise.patc
+                     if (respawnComplete != null) {
+                         respawnComplete.accept(ServerPlayer.this);
                      }
++                    // Canvas start - region threading
++                    io.canvasmc.canvas.event.PlayerPostRespawnAsyncEvent postEvent = new io.canvasmc.canvas.event.PlayerPostRespawnAsyncEvent(
++                        ServerPlayer.this.getBukkitEntity(),
++                        spawnLoc,
++                        isBedSpawn[0],
++                        usedRespawnAnchor[0],
++                        missingRespawnBlock[0],
++                        reason
++                    );
++                    postEvent.callEvent();
++                    // Canvas end - region threading
                  }
              );
 +            // Canvas start - region threading
@@ -74,7 +87,7 @@ index 8b013e8dc92ddb0d8f42a5cfe3c9b9e92e4c1722..24f134768bfa1dcbc3f6b19006b32761
          });
  
          // find and modify respawn block state
-@@ -1784,6 +1815,7 @@ public class ServerPlayer extends Player implements ca.spottedleaf.moonrise.patc
+@@ -1784,6 +1826,7 @@ public class ServerPlayer extends Player implements ca.spottedleaf.moonrise.patc
                          respawnWorld, respawnConfig, !alive
                      ).orElse(null);
                      if (spawnPos == null) {
@@ -82,7 +95,7 @@ index 8b013e8dc92ddb0d8f42a5cfe3c9b9e92e4c1722..24f134768bfa1dcbc3f6b19006b32761
                          // no spawn
                          ServerPlayer.this.connection.send(
                              new ClientboundGameEventPacket(ClientboundGameEventPacket.NO_RESPAWN_BLOCK_AVAILABLE, 0.0F)
-@@ -1797,7 +1829,7 @@ public class ServerPlayer extends Player implements ca.spottedleaf.moonrise.patc
+@@ -1797,7 +1840,7 @@ public class ServerPlayer extends Player implements ca.spottedleaf.moonrise.patc
                      }
  
                      boolean isRespawnAnchor = respawnWorld.getBlockState(respawnConfig.respawnData.pos()).is(net.minecraft.world.level.block.Blocks.RESPAWN_ANCHOR);
@@ -92,10 +105,10 @@ index 8b013e8dc92ddb0d8f42a5cfe3c9b9e92e4c1722..24f134768bfa1dcbc3f6b19006b32761
                      respawnPosAngle[0] = spawnPos; // Canvas - region threading
  
 diff --git a/net/minecraft/world/entity/Entity.java b/net/minecraft/world/entity/Entity.java
-index f987d0ce58cb3f6dfcd2d0a4ae09933bbd1a75a3..f7ea37c6ff57fb940442f00f0906795e0782e3cb 100644
+index 7b748ec1f950be75426b49536a139e87595962fb..858fe6ed281953c5fe36d4453d74d93e0872ab24 100644
 --- a/net/minecraft/world/entity/Entity.java
 +++ b/net/minecraft/world/entity/Entity.java
-@@ -4349,29 +4349,28 @@ public abstract class Entity implements SyncedDataHolder, DebugValueSource, Name
+@@ -4350,29 +4350,28 @@ public abstract class Entity implements SyncedDataHolder, DebugValueSource, Name
          );
      }
  
@@ -131,7 +144,7 @@ index f987d0ce58cb3f6dfcd2d0a4ae09933bbd1a75a3..f7ea37c6ff57fb940442f00f0906795e
                  }
                  entity.getBukkitEntity(); // force bukkit entity to be created before TPing
              }
-@@ -4380,21 +4379,87 @@ public abstract class Entity implements SyncedDataHolder, DebugValueSource, Name
+@@ -4381,21 +4380,87 @@ public abstract class Entity implements SyncedDataHolder, DebugValueSource, Name
          }
  
          if ((teleportFlags & TELEPORT_FLAG_TELEPORT_PASSENGERS) != 0L) {
@@ -228,7 +241,7 @@ index f987d0ce58cb3f6dfcd2d0a4ae09933bbd1a75a3..f7ea37c6ff57fb940442f00f0906795e
              boolean hasPassengers = !this.passengers.isEmpty();
              EntityTreeNode passengerTree = this.detachPassengers();
  
-@@ -4427,12 +4492,21 @@ public abstract class Entity implements SyncedDataHolder, DebugValueSource, Name
+@@ -4428,12 +4493,21 @@ public abstract class Entity implements SyncedDataHolder, DebugValueSource, Name
              if (teleportComplete != null) {
                  teleportComplete.accept(this);
              }
@@ -251,7 +264,7 @@ index f987d0ce58cb3f6dfcd2d0a4ae09933bbd1a75a3..f7ea37c6ff57fb940442f00f0906795e
          this.canvas$lastTeleportOrigin = new io.canvasmc.canvas.util.ServerLocation(originWorld, currPos, this.getYRot(), this.getXRot()); // Canvas - region threading
  
          for (EntityTreeNode node : fullPassengerTree) {
-@@ -4443,7 +4517,22 @@ public abstract class Entity implements SyncedDataHolder, DebugValueSource, Name
+@@ -4444,7 +4518,22 @@ public abstract class Entity implements SyncedDataHolder, DebugValueSource, Name
              node.root = node.root.transformForAsyncTeleport(destination, pos, yaw, pitch, velocity);
          }
  
@@ -275,7 +288,7 @@ index f987d0ce58cb3f6dfcd2d0a4ae09933bbd1a75a3..f7ea37c6ff57fb940442f00f0906795e
  
          return true;
      }
-@@ -4673,35 +4762,46 @@ public abstract class Entity implements SyncedDataHolder, DebugValueSource, Name
+@@ -4674,35 +4763,46 @@ public abstract class Entity implements SyncedDataHolder, DebugValueSource, Name
          }
      }
  
@@ -333,7 +346,7 @@ index f987d0ce58cb3f6dfcd2d0a4ae09933bbd1a75a3..f7ea37c6ff57fb940442f00f0906795e
  
      protected void prePortalLogic(ServerLevel origin, ServerLevel destination, PortalType type) {
  
-@@ -4709,10 +4809,36 @@ public abstract class Entity implements SyncedDataHolder, DebugValueSource, Name
+@@ -4710,10 +4810,36 @@ public abstract class Entity implements SyncedDataHolder, DebugValueSource, Name
  
      protected boolean portalToAsync(ServerLevel destination, BlockPos portalPos, boolean takePassengers,
                                      PortalType type, java.util.function.Consumer<Entity> teleportComplete) {
@@ -372,7 +385,7 @@ index f987d0ce58cb3f6dfcd2d0a4ae09933bbd1a75a3..f7ea37c6ff57fb940442f00f0906795e
  
          Vec3 initialPosition = this.position();
          ChunkPos initialPositionChunk = new ChunkPos(
-@@ -4724,7 +4850,7 @@ public abstract class Entity implements SyncedDataHolder, DebugValueSource, Name
+@@ -4725,7 +4851,7 @@ public abstract class Entity implements SyncedDataHolder, DebugValueSource, Name
          // first, remove entity/passengers from world
          EntityTreeNode passengerTree = this.detachPassengers();
          List<EntityTreeNode> fullPassengerTree = passengerTree.getFullTree();
@@ -381,7 +394,7 @@ index f987d0ce58cb3f6dfcd2d0a4ae09933bbd1a75a3..f7ea37c6ff57fb940442f00f0906795e
  
          for (EntityTreeNode node : fullPassengerTree) {
              node.root.preChangeDimension();
-@@ -4771,7 +4897,7 @@ public abstract class Entity implements SyncedDataHolder, DebugValueSource, Name
+@@ -4772,7 +4898,7 @@ public abstract class Entity implements SyncedDataHolder, DebugValueSource, Name
  
              // place
              passengerTree.root.placeInAsync(
@@ -390,7 +403,7 @@ index f987d0ce58cb3f6dfcd2d0a4ae09933bbd1a75a3..f7ea37c6ff57fb940442f00f0906795e
                  passengerTree,
                  (Entity teleported) -> {
                      if (info.postTeleportTransition() != null) {
-@@ -4781,6 +4907,17 @@ public abstract class Entity implements SyncedDataHolder, DebugValueSource, Name
+@@ -4782,6 +4908,17 @@ public abstract class Entity implements SyncedDataHolder, DebugValueSource, Name
                      if (teleportComplete != null) {
                          teleportComplete.accept(teleported);
                      }
