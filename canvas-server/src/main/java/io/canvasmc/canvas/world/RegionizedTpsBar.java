@@ -114,7 +114,7 @@ public class RegionizedTpsBar {
 
     private @NonNull Component buildComponent(final double tps, final double mspt, final ServerPlayer localPlayer) {
         final int pingVal = localPlayer != null ? localPlayer.connection.latency() : 0;
-        final long chunkHot = this.worldData.getChunkCount();
+        final long chunkHot = this.worldData.world.getChunkSource().getFullChunksCount();
         return MINI_MESSAGE.deserialize(
             DEFAULT_FORMAT,
             net.kyori.adventure.text.minimessage.tag.resolver.Placeholder.component("tps", getTpsComponent(tps)),
