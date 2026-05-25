@@ -19,6 +19,8 @@ import net.kyori.adventure.text.format.Style;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.minecraft.network.protocol.game.ClientboundSetActionBarTextPacket;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import org.bukkit.craftbukkit.entity.CraftPlayer;
 import org.jetbrains.annotations.Contract;
@@ -114,7 +116,7 @@ public class RegionizedTpsBar {
 
     private @NonNull Component buildComponent(final double tps, final double mspt, final ServerPlayer localPlayer) {
         final int pingVal = localPlayer != null ? localPlayer.connection.latency() : 0;
-        final long chunkHot = this.worldData.world.getChunkSource().getFullChunksCount();
+        final long chunkHot = getGlobalFullChunksCount();
         return MINI_MESSAGE.deserialize(
             DEFAULT_FORMAT,
             net.kyori.adventure.text.minimessage.tag.resolver.Placeholder.component("tps", getTpsComponent(tps)),
@@ -122,6 +124,14 @@ public class RegionizedTpsBar {
             net.kyori.adventure.text.minimessage.tag.resolver.Placeholder.component("ping", getPingComponent(pingVal)),
             net.kyori.adventure.text.minimessage.tag.resolver.Placeholder.component("chunkhot", getChunkHotComponent(chunkHot))
         );
+    }
+
+    private static long getGlobalFullChunksCount() {
+        long chunkHot = 0L;
+        for (final ServerLevel level : MinecraftServer.getServer().getAllLevels()) {
+            chunkHot += level.getChunkSource().getFullChunksCount();
+        }
+        return chunkHot;
     }
 
     private @NotNull Component getTpsComponent(double tps) {
