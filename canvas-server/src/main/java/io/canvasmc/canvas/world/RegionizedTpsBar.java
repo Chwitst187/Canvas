@@ -110,7 +110,7 @@ public class RegionizedTpsBar {
     }
 
     private Component gradientForChunkHot(long chunkHot, String value) {
-        String tpl = chunkHot < 500 ? GRADIENT_GOOD : (chunkHot < 750 ? GRADIENT_MEDIUM : GRADIENT_LOW);
+        String tpl = chunkHot < 20_000 ? GRADIENT_GOOD : (chunkHot < 30_000 ? GRADIENT_MEDIUM : GRADIENT_LOW);
         return gradient(tpl, value);
     }
 
