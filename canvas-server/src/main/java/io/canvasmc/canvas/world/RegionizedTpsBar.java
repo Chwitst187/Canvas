@@ -6,11 +6,14 @@ import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import io.canvasmc.canvas.Config;
 import io.papermc.paper.adventure.PaperAdventure;
+import io.papermc.paper.threadedregions.RegionizedServer;
 import io.papermc.paper.threadedregions.RegionizedWorldData;
+import io.papermc.paper.threadedregions.TickRegionScheduler;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import java.util.function.Consumer;
 import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
@@ -37,8 +40,12 @@ public class RegionizedTpsBar {
     private static final String GRADIENT_LOW = "<gradient:#ff5555:#aa0000><text></gradient>";
     private static final int TPS_PRECISION = 2;
     private static final int MSPT_PRECISION = 2;
+    private static final int UPDATE_INTERVAL_TICKS = 20;
+    private static final long GLOBAL_STATS_CACHE_NANOS = 1_000_000_000L;
     public static final String DEFAULT_FORMAT =
         "<gray>TPS: <tps> MSPT: <mspt> Ping: <ping> ChunkHot: <chunkhot>";
+    private static volatile long cachedGlobalStatsAt = Long.MIN_VALUE;
+    private static volatile GlobalStats cachedGlobalStats = GlobalStats.empty();
     private final RegionizedWorldData worldData;
     private final boolean canTick;
     private int ticksSinceLastUpdate = 0;
@@ -70,19 +77,14 @@ public class RegionizedTpsBar {
         if (!this.canTick) return;
 
         this.ticksSinceLastUpdate++;
-        if (this.ticksSinceLastUpdate >= 20) {
+        if (this.ticksSinceLastUpdate >= UPDATE_INTERVAL_TICKS) {
             this.ticksSinceLastUpdate = 0;
-            // update tps maps
-            TickData.TickReportData tickReportData = this.worldData.regionData.getRegionSchedulingHandle().getTickReport5s(System.nanoTime());
-            TickData.SegmentedAverage tpsAverage = tickReportData.tpsData();
-            TickData.SegmentedAverage msptAverage = tickReportData.timePerTickData();
-            final double tps = tpsAverage.segmentAll().average();
-            final double mspt = msptAverage.segmentAll().average() / 1.0E6;
+            final GlobalStats stats = getGlobalStats();
             // update players
             for (final ServerPlayer localPlayer : this.worldData.getLocalPlayers()) {
-                final Component textComponent = buildComponent(tps, mspt, localPlayer);
+                final Component textComponent = buildComponent(stats, localPlayer);
                 localPlayer.canvas$tpsBarDisplay.setDisplay(textComponent);
-                localPlayer.canvas$tpsBarDisplay.updateBarColorAndProgress(mspt);
+                localPlayer.canvas$tpsBarDisplay.updateBarColorAndProgress(stats.mspt());
                 localPlayer.canvas$tpsBarDisplay.tick();
             }
         }
@@ -114,16 +116,32 @@ public class RegionizedTpsBar {
         return gradient(tpl, value);
     }
 
-    private @NonNull Component buildComponent(final double tps, final double mspt, final ServerPlayer localPlayer) {
+    private @NonNull Component buildComponent(final @NonNull GlobalStats stats, final ServerPlayer localPlayer) {
         final int pingVal = localPlayer != null ? localPlayer.connection.latency() : 0;
-        final long chunkHot = getGlobalFullChunksCount();
+        final String configuredFormat = Config.INSTANCE.tpsBarFormat;
+        final String effectiveFormat = configuredFormat == null || configuredFormat.isBlank()
+            ? DEFAULT_FORMAT
+            : normalizeFormat(configuredFormat);
+
         return MINI_MESSAGE.deserialize(
-            DEFAULT_FORMAT,
-            net.kyori.adventure.text.minimessage.tag.resolver.Placeholder.component("tps", getTpsComponent(tps)),
-            net.kyori.adventure.text.minimessage.tag.resolver.Placeholder.component("mspt", getMsptComponent(mspt)),
+            effectiveFormat,
+            net.kyori.adventure.text.minimessage.tag.resolver.Placeholder.component("tps", getTpsComponent(stats.tps())),
+            net.kyori.adventure.text.minimessage.tag.resolver.Placeholder.component("mspt", getMsptComponent(stats.mspt())),
             net.kyori.adventure.text.minimessage.tag.resolver.Placeholder.component("ping", getPingComponent(pingVal)),
-            net.kyori.adventure.text.minimessage.tag.resolver.Placeholder.component("chunkhot", getChunkHotComponent(chunkHot))
+            net.kyori.adventure.text.minimessage.tag.resolver.Placeholder.component("chunkhot", getChunkHotComponent(stats.chunkHot())),
+            net.kyori.adventure.text.minimessage.tag.resolver.Placeholder.component("util", getUtilComponent(stats.utilisationPercent())),
+            net.kyori.adventure.text.minimessage.tag.resolver.Placeholder.component("players", getPlayersComponent(stats.players()))
         );
+    }
+
+    private static @NonNull String normalizeFormat(final @NonNull String input) {
+        return input
+            .replace("%tps%", "<tps>")
+            .replace("%mspt%", "<mspt>")
+            .replace("%ping%", "<ping>")
+            .replace("%chunkhot%", "<chunkhot>")
+            .replace("%util%", "<util>")
+            .replace("%players%", "<players>");
     }
 
     private static long getGlobalFullChunksCount() {
@@ -154,6 +172,98 @@ public class RegionizedTpsBar {
             return MINI_MESSAGE.deserialize("<gray>—");
         }
         return gradientForChunkHot(chunkHot, String.valueOf(chunkHot));
+    }
+
+    private @NotNull Component getUtilComponent(double utilisationPercent) {
+        if (utilisationPercent <= 0.0D) {
+            return MINI_MESSAGE.deserialize("<gray>—");
+        }
+
+        final double ratio = Math.min(1.0D, Math.max(0.0D, utilisationPercent / 100.0D));
+        final String tpl = ratio <= 0.50D ? GRADIENT_GOOD : (ratio <= 0.70D ? GRADIENT_MEDIUM : GRADIENT_LOW);
+        return gradient(tpl, String.format(Locale.ROOT, "%.1f%%", utilisationPercent));
+    }
+
+    private @NotNull Component getPlayersComponent(int players) {
+        if (players <= 0) {
+            return MINI_MESSAGE.deserialize("<gray>—");
+        }
+        return gradient(GRADIENT_GOOD, String.valueOf(players));
+    }
+
+    private static @NonNull GlobalStats getGlobalStats() {
+        final long now = System.nanoTime();
+        final long cachedAt = cachedGlobalStatsAt;
+        if (cachedAt != Long.MIN_VALUE && now - cachedAt < GLOBAL_STATS_CACHE_NANOS) {
+            return cachedGlobalStats;
+        }
+
+        synchronized (RegionizedTpsBar.class) {
+            final long refreshedCachedAt = cachedGlobalStatsAt;
+            if (refreshedCachedAt != Long.MIN_VALUE && now - refreshedCachedAt < GLOBAL_STATS_CACHE_NANOS) {
+                return cachedGlobalStats;
+            }
+
+            final GlobalStats stats = computeGlobalStats(now);
+            cachedGlobalStats = stats;
+            cachedGlobalStatsAt = now;
+            return stats;
+        }
+    }
+
+    private static @NonNull GlobalStats computeGlobalStats(final long now) {
+        final GlobalStatsAccumulator accumulator = new GlobalStatsAccumulator(now);
+        accumulator.add(RegionizedServer.getGlobalTickData());
+        for (final ServerLevel world : RegionizedServer.getInstance().worlds) {
+            world.regioniser.computeForAllRegionsUnsynchronised(region -> accumulator.add(region.getData().getRegionSchedulingHandle()));
+        }
+
+        final int players = MinecraftServer.getServer().getPlayerList().getPlayerCount();
+        return accumulator.toStats(players, getGlobalFullChunksCount());
+    }
+
+    private record GlobalStats(double tps, double mspt, double utilisationPercent, int players, long chunkHot) {
+        private static @NonNull GlobalStats empty() {
+            return new GlobalStats(20.0D, 0.0D, 0.0D, 0, 0L);
+        }
+    }
+
+    private static final class GlobalStatsAccumulator {
+        private final long now;
+        private double tpsTotal;
+        private double msptTotal;
+        private double utilisationTotal;
+        private int samples;
+
+        private GlobalStatsAccumulator(final long now) {
+            this.now = now;
+        }
+
+        private void add(final TickRegionScheduler.RegionScheduleHandle scheduleHandle) {
+            final TickData.TickReportData reportData = scheduleHandle.getTickReport5s(this.now);
+            if (reportData == null) {
+                return;
+            }
+
+            this.tpsTotal += reportData.tpsData().segmentAll().average();
+            this.msptTotal += reportData.timePerTickData().segmentAll().average() / 1.0E6;
+            this.utilisationTotal += Math.max(0.0D, reportData.utilisation()) * 100.0D;
+            this.samples++;
+        }
+
+        private @NonNull GlobalStats toStats(final int players, final long chunkHot) {
+            if (this.samples <= 0) {
+                return new GlobalStats(TickRegionScheduler.getTickRate(), 0.0D, 0.0D, players, chunkHot);
+            }
+
+            return new GlobalStats(
+                this.tpsTotal / this.samples,
+                this.msptTotal / this.samples,
+                this.utilisationTotal / this.samples,
+                players,
+                chunkHot
+            );
+        }
     }
 
     public enum Placement {
@@ -282,13 +392,7 @@ public class RegionizedTpsBar {
         }
 
         private static @NonNull String normalize(final @NonNull String input) {
-            return input
-                .replace("%tps%", "<tps>")
-                .replace("%mspt%", "<mspt>")
-                .replace("%ping%", "<ping>")
-                .replace("%chunkhot%", "<chunkhot>")
-                .replace("%util%", "<util>")
-                .replace("%players%", "<players>");
+            return normalizeFormat(input);
         }
 
         private static @NonNull List<Segment> buildSegments(final String normalized) {
