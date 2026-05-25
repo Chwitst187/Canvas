@@ -6,14 +6,18 @@ import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import io.canvasmc.canvas.Config;
 import io.papermc.paper.adventure.PaperAdventure;
+import io.papermc.paper.threadedregions.RegionizedServer;
 import io.papermc.paper.threadedregions.RegionizedWorldData;
+import io.papermc.paper.threadedregions.TickRegionScheduler;
+import io.papermc.paper.threadedregions.TickRegions;
 import java.text.DecimalFormat;
 import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.minecraft.network.protocol.game.ClientboundSetActionBarTextPacket;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.entity.Entity;
 import org.bukkit.craftbukkit.entity.CraftPlayer;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
@@ -35,6 +39,9 @@ public class RegionizedRegionBar {
     private static final double UTIL_RED = 90.0D;
     private static final int ENTITIES_YELLOW = 250;
     private static final int ENTITIES_RED = 450;
+    private static final long GLOBAL_STATS_CACHE_NANOS = 1_000_000_000L;
+    private static volatile long cachedGlobalStatsAt = Long.MIN_VALUE;
+    private static volatile GlobalStats cachedGlobalStats = GlobalStats.empty();
 
     private final ThreadLocal<DecimalFormat> oneDecimalPlaces = ThreadLocal.withInitial(() -> new DecimalFormat("#,##0.0"));
     private final RegionizedWorldData worldData;
@@ -57,33 +64,14 @@ public class RegionizedRegionBar {
         }
         this.ticksSinceLastUpdate = 0;
 
-        final TickData.TickReportData reportData = this.worldData.regionData.getRegionSchedulingHandle().getTickReport5s(System.nanoTime());
-        if (reportData == null) {
-            return;
-        }
-
-        final double utilisation = Math.max(0.0D, reportData.utilisation());
-        final double utilisationPercent = utilisation * 100.0D;
-        final int chunks = this.worldData.getChunkCount();
-        final int players = this.worldData.getPlayerCount();
-        final int entities = this.countEntities();
+        final GlobalStats stats = getGlobalStats();
 
         for (final ServerPlayer localPlayer : this.worldData.getLocalPlayers()) {
             final DisplayManager display = localPlayer.canvas$regionBarDisplay;
-            display.setDisplay(this.buildComponent(utilisationPercent, chunks, players, entities));
-            display.updateBarColorAndProgress(utilisationPercent);
+            display.setDisplay(this.buildComponent(stats.utilisationPercent(), stats.chunks(), stats.players(), stats.entities()));
+            display.updateBarColorAndProgress(stats.utilisationPercent());
             display.tick();
         }
-    }
-
-    private int countEntities() {
-        int entities = 0;
-        for (final Entity entity : this.worldData.getLoadedEntities()) {
-            if (!entity.isRemoved()) {
-                entities++;
-            }
-        }
-        return entities;
     }
 
     private @NonNull Component buildComponent(final double utilisationPercent, final int chunks, final int players, final int entities) {
@@ -110,6 +98,39 @@ public class RegionizedRegionBar {
             .replace("%chunks%", "<chunks>")
             .replace("%players%", "<players>")
             .replace("%entities%", "<entities>");
+    }
+
+    private static @NonNull GlobalStats getGlobalStats() {
+        final long now = System.nanoTime();
+        final long cachedAt = cachedGlobalStatsAt;
+        if (cachedAt != Long.MIN_VALUE && now - cachedAt < GLOBAL_STATS_CACHE_NANOS) {
+            return cachedGlobalStats;
+        }
+
+        synchronized (RegionizedRegionBar.class) {
+            final long refreshedCachedAt = cachedGlobalStatsAt;
+            if (refreshedCachedAt != Long.MIN_VALUE && now - refreshedCachedAt < GLOBAL_STATS_CACHE_NANOS) {
+                return cachedGlobalStats;
+            }
+
+            final GlobalStats stats = computeGlobalStats(now);
+            cachedGlobalStats = stats;
+            cachedGlobalStatsAt = now;
+            return stats;
+        }
+    }
+
+    private static @NonNull GlobalStats computeGlobalStats(final long now) {
+        final GlobalStatsAccumulator accumulator = new GlobalStatsAccumulator(now);
+        for (final ServerLevel world : RegionizedServer.getInstance().worlds) {
+            world.regioniser.computeForAllRegionsUnsynchronised(region -> {
+                final TickRegions.TickRegionData data = region.getData();
+                accumulator.add(data.getRegionSchedulingHandle());
+                accumulator.add(data.getRegionStats());
+            });
+        }
+
+        return accumulator.toStats(MinecraftServer.getServer().getPlayerList().getPlayerCount());
     }
 
     private Component gradient(final String tpl, final String value) {
@@ -163,6 +184,46 @@ public class RegionizedRegionBar {
             return this.gradientComponent(0.60D, text);
         }
         return this.gradientComponent(0.25D, text);
+    }
+
+    private record GlobalStats(double utilisationPercent, int chunks, int players, int entities) {
+        private static @NonNull GlobalStats empty() {
+            return new GlobalStats(0.0D, 0, 0, 0);
+        }
+    }
+
+    private static final class GlobalStatsAccumulator {
+        private final long now;
+        private double utilisationTotal;
+        private int utilisationSamples;
+        private int chunks;
+        private int entities;
+
+        private GlobalStatsAccumulator(final long now) {
+            this.now = now;
+        }
+
+        private void add(final TickRegionScheduler.RegionScheduleHandle scheduleHandle) {
+            final TickData.TickReportData reportData = scheduleHandle.getTickReport5s(this.now);
+            if (reportData == null) {
+                return;
+            }
+
+            this.utilisationTotal += Math.max(0.0D, reportData.utilisation()) * 100.0D;
+            this.utilisationSamples++;
+        }
+
+        private void add(final TickRegions.RegionStats regionStats) {
+            this.chunks += regionStats.getChunkCount();
+            this.entities += regionStats.getEntityCount();
+        }
+
+        private @NonNull GlobalStats toStats(final int players) {
+            final double utilisationPercent = this.utilisationSamples <= 0
+                ? 0.0D
+                : this.utilisationTotal / this.utilisationSamples;
+            return new GlobalStats(utilisationPercent, this.chunks, players, this.entities);
+        }
     }
 
     public enum Placement {
@@ -297,4 +358,3 @@ public class RegionizedRegionBar {
         return BossBar.Color.RED;
     }
 }
-
